@@ -192,3 +192,20 @@ python manage.py runserver
 ```
 http://127.0.0.1:8000/
 ```
+# 🐳 Запуск через Docker (Альтернативный способ)
+
+Если в проекте настроен Docker, вы можете запустить его изолированно, не настраивая локальный PostgreSQL и Python-окружение:
+
+Соберите образ и поднимите контейнеры в фоновом режиме:
+```
+    Bash
+    docker-compose up -d --build
+```
+Выполните миграции внутри работающего контейнера:
+```Bash
+docker-compose exec web python CorpMarket/manage.py migrate
+```
+
+```Bash
+docker-compose exec web python CorpMarket/manage.py createsuperuser
+```
