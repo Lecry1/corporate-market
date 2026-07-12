@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin,
     UserPassesTestMixin,
 )
-from django.db.models import F, Q
+from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -25,20 +25,46 @@ class AdvertListView(ListView):
         queryset = super().get_queryset()
 
         query = self.request.GET.get("q", "").strip()
-        category = self.request.GET.get("category", "")
-        min_price = self.request.GET.get("min_price", "")
-        max_price = self.request.GET.get("max_price", "")
-        ordering = self.request.GET.get("ordering", "-created_at")
+        category = self.request.GET.get("category", "").strip()
+        status = self.request.GET.get(
+            "status",
+            Advert.Status.ACTIVE,
+        ).strip()
+        min_price = self.request.GET.get("min_price", "").strip()
+        max_price = self.request.GET.get("max_price", "").strip()
+        ordering = self.request.GET.get(
+            "ordering",
+            "-created_at",
+        ).strip()
 
+        # Поиск по названию и описанию.
         if query:
             queryset = queryset.filter(
                 Q(title__icontains=query)
                 | Q(description__icontains=query)
             )
 
-        if category:
+        # Фильтрация по категории.
+        valid_categories = {
+            value for value, _label in Advert.Category.choices
+        }
+
+        if category in valid_categories:
             queryset = queryset.filter(category=category)
 
+        # По умолчанию показываем только активные объявления.
+        # Значение "all" означает вывод всех статусов.
+        valid_statuses = {
+            value for value, _label in Advert.Status.choices
+        }
+
+        if status != "all":
+            if status not in valid_statuses:
+                status = Advert.Status.ACTIVE
+
+            queryset = queryset.filter(status=status)
+
+        # Фильтрация по минимальной цене.
         if min_price:
             try:
                 queryset = queryset.filter(
@@ -47,6 +73,7 @@ class AdvertListView(ListView):
             except ValueError:
                 pass
 
+        # Фильтрация по максимальной цене.
         if max_price:
             try:
                 queryset = queryset.filter(
@@ -65,26 +92,78 @@ class AdvertListView(ListView):
         if ordering not in allowed_orderings:
             ordering = "-created_at"
 
-        if ordering == "price":
+        ordering_expressions = self._get_ordering_expressions(ordering)
+
+        # Если выбраны все статусы, сначала группируем объявления:
+        # активные -> выполненные -> архивные.
+        if status == "all":
+            queryset = queryset.annotate(
+                status_priority=Case(
+                    When(
+                        status=Advert.Status.ACTIVE,
+                        then=Value(0),
+                    ),
+                    When(
+                        status=Advert.Status.COMPLETED,
+                        then=Value(1),
+                    ),
+                    When(
+                        status=Advert.Status.ARCHIVED,
+                        then=Value(2),
+                    ),
+                    default=Value(3),
+                    output_field=IntegerField(),
+                )
+            )
+
             return queryset.order_by(
-                F("price").asc(nulls_last=True)
+                "status_priority",
+                *ordering_expressions,
+            )
+
+        return queryset.order_by(*ordering_expressions)
+
+    @staticmethod
+    def _get_ordering_expressions(ordering):
+        """
+        Возвращает безопасные выражения сортировки.
+
+        Для цены значения NULL ("Договорная") всегда располагаются
+        после объявлений с указанной ценой.
+        """
+        if ordering == "price":
+            return (
+                F("price").asc(nulls_last=True),
+                F("created_at").desc(),
             )
 
         if ordering == "-price":
-            return queryset.order_by(
-                F("price").desc(nulls_last=True)
+            return (
+                F("price").desc(nulls_last=True),
+                F("created_at").desc(),
             )
 
-        return queryset.order_by(ordering)
+        if ordering == "created_at":
+            return (F("created_at").asc(),)
+
+        return (F("created_at").desc(),)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         context["categories"] = Advert.Category.choices
+        context["statuses"] = Advert.Status.choices
 
+        # В шаблоне отсутствие параметра status означает
+        # выбранный по умолчанию статус ACTIVE.
+        context["selected_status"] = self.request.GET.get(
+            "status",
+            Advert.Status.ACTIVE,
+        )
+
+        # Сохраняем фильтры при переходе между страницами.
         query_params = self.request.GET.copy()
         query_params.pop("page", None)
-
         context["query_string"] = query_params.urlencode()
 
         return context
@@ -130,6 +209,7 @@ class AdvertUpdateView(
 
     def test_func(self):
         advert = self.get_object()
+
         return (
             advert.seller == self.request.user
             or self.request.user.is_superuser
@@ -147,6 +227,7 @@ class AdvertDeleteView(
 
     def test_func(self):
         advert = self.get_object()
+
         return (
             advert.seller == self.request.user
             or self.request.user.is_superuser
