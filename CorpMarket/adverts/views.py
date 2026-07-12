@@ -58,7 +58,10 @@ class AdvertUpdateView(
 
     def test_func(self):
         advert = self.get_object()
-        return advert.seller == self.request.user
+        return (
+            advert.seller == self.request.user
+            or self.request.user.is_superuser
+        )
 
 
 class AdvertDeleteView(
@@ -72,4 +75,7 @@ class AdvertDeleteView(
 
     def test_func(self):
         advert = self.get_object()
-        return advert.seller == self.request.user
+        return (
+            advert.seller == self.request.user
+            or self.request.user.is_superuser
+        )
