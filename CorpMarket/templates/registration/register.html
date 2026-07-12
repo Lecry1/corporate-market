@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — КорпМаркет{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-xl-6">
+        <h1 class="mb-4">Регистрация</h1>
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% for error in form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                        <div class="form-text">
+                            {{ field.help_text|safe }}
+                        </div>
+                    {% endif %}
+
+                    {% for error in field.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button class="btn btn-primary" type="submit">
+                Зарегистрироваться
+            </button>
+
+            <a class="btn btn-link" href="{% url 'login' %}">
+                Уже есть аккаунт
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}
