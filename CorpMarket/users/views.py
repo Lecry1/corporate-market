@@ -82,7 +82,10 @@ class CurrentUserProfileView(
     UserProfileView,
 ):
     def get_object(self, queryset=None):
-        return self.request.user
+        if queryset is None:
+            queryset = self.get_queryset()
+
+        return queryset.get(pk=self.request.user.pk)
 
 
 class UserProfileUpdateView(
