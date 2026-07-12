@@ -1,4 +1,8 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    UserPassesTestMixin,
+)
+from django.db.models import F, Q
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -16,6 +20,62 @@ class AdvertListView(ListView):
     template_name = "adverts/advert_list.html"
     context_object_name = "adverts"
     paginate_by = 6
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        query = self.request.GET.get("q", "").strip()
+        category = self.request.GET.get("category", "")
+        min_price = self.request.GET.get("min_price", "")
+        max_price = self.request.GET.get("max_price", "")
+        ordering = self.request.GET.get("ordering", "-created_at")
+
+        if query:
+            queryset = queryset.filter(
+                Q(title__icontains=query)
+                | Q(description__icontains=query)
+            )
+
+        if category:
+            queryset = queryset.filter(category=category)
+
+        if min_price:
+            try:
+                queryset = queryset.filter(
+                    price__gte=int(min_price)
+                )
+            except ValueError:
+                pass
+
+        if max_price:
+            try:
+                queryset = queryset.filter(
+                    price__lte=int(max_price)
+                )
+            except ValueError:
+                pass
+
+        allowed_orderings = {
+            "created_at",
+            "-created_at",
+            "price",
+            "-price",
+        }
+
+        if ordering not in allowed_orderings:
+            ordering = "-created_at"
+
+        if ordering == "price":
+            return queryset.order_by(
+                F("price").asc(nulls_last=True)
+            )
+
+        if ordering == "-price":
+            return queryset.order_by(
+                F("price").desc(nulls_last=True)
+            )
+
+        return queryset.order_by(ordering)
 
 
 class AdvertDetailView(DetailView):
