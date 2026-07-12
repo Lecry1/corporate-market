@@ -46,7 +46,7 @@
         Создано: {{ advert.created_at|date:"d.m.Y H:i" }}
     </p>
 
-    {% if user == advert.seller %}
+    {% if user == advert.seller or user.is_superuser %}
         <div class="d-flex gap-2">
             <a
                 class="btn btn-warning"
