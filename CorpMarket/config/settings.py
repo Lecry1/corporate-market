@@ -86,7 +86,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'corpmarket_user'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'your_password'),
         # Для Docker-контейнеров здесь должно быть имя сервиса БД из docker-compose, т.е. 'db'
-        'HOST': os.environ.get('DB_HOST', 'db'), 
+        'HOST': os.environ.get('DB_HOST', 'db'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
@@ -126,6 +126,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 AUTH_USER_MODEL = 'users.CustomUser'
+LOGIN_URL = "users:login"
 
 LOGIN_REDIRECT_URL = "adverts:list"
 LOGOUT_REDIRECT_URL = "adverts:list"
