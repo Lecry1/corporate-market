@@ -10,12 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
-import os
-
 from dotenv import load_dotenv
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +43,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'adverts.apps.AdvertsConfig',
     'reviews.apps.ReviewsConfig',
+    'chats.apps.ChatsConfig',
 ]
 
 MIDDLEWARE = [
@@ -86,7 +85,7 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'corpmarket_user'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'your_password'),
         # Для Docker-контейнеров здесь должно быть имя сервиса БД из docker-compose, т.е. 'db'
-        'HOST': os.environ.get('DB_HOST', 'db'), 
+        'HOST': os.environ.get('DB_HOST', 'db'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
