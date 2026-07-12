@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    restart: always
+    # Пробрасываем порт 8000 из контейнера наружу
+    ports:
+      - "8000:8000"
+    # Подключаем переменные окружения из файла .env
+    env_file:
+      - .env
+    # Монтируем текущую папку, чтобы код обновлялся без пересборки контейнера (hot-reload)
+    volumes:
+      - .:/app
+    # Веб-контейнер ждет запуска базы данных
+    depends_on:
+      - db
+
+# Создаем постоянный том (volume), чтобы данные в БД не стирались при перезапуске
+volumes:
+  postgres_data:
