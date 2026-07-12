@@ -130,3 +130,6 @@ LOGIN_URL = "users:login"
 
 LOGIN_REDIRECT_URL = "adverts:list"
 LOGOUT_REDIRECT_URL = "adverts:list"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
