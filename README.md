@@ -79,52 +79,7 @@ pre-commit run --all-files
 
 ---
 
-# Настройка PostgreSQL
-
-## Создание пользователя
-
-Создать пользователя PostgreSQL для приложения:
-
-Через pgAdmin:
-
-```
-Login/Group Roles
-    -> Create
-    -> Login/Group Role
-```
-
-Параметры:
-
-```
-Name: corpmarket_user
-Password: your_password
-Can login: Yes
-```
-
-Остальные права администратора выдавать не нужно.
-
----
-
-## Создание базы данных
-
-Создать базу:
-
-```
-Databases
-    -> Create
-    -> Database
-```
-
-Параметры:
-
-```
-Database: corporate_market
-Owner: corpmarket_user
-```
-
----
-
-# Настройка переменных окружения
+## Настройка переменных окружения
 
 Создать файл `.env` в корне проекта на основе `.env.example`.
 
@@ -149,9 +104,87 @@ DB_PORT=5432
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+# 🐳 Запуск через Docker
+
+Если в проекте настроен Docker, вы можете запустить его изолированно, не настраивая локальный PostgreSQL и Python-окружение:
+
+Соберите образ и поднимите контейнеры в фоновом режиме:
+```Bash
+docker-compose up -d --build
+```
+Выполните миграции внутри работающего контейнера:
+```Bash
+docker-compose exec web python CorpMarket/manage.py migrate
+```
+Создайте администратора Django:
+```Bash
+docker-compose exec web python CorpMarket/manage.py createsuperuser
+```
+
+## Дополнительные команды
+
+Посмотреть логи (общие для всех контейнеров и отдельные):
+```Bash
+docker compose logs -f
+docker compose logs -f web
+docker compose logs -f db
+```
+
+Остановить контейнеры:
+```Bash
+docker compose down -v
+```
+
+
 ---
 
-# Подготовка базы данных
+# Запуск локально (Альтернативный вариант для разработки)
+## Настройка PostgreSQL
+
+Через pgAdmin:
+
+### Создание пользователя
+
+Создать пользователя PostgreSQL для приложения:
+
+```
+Login/Group Roles
+    -> Create
+    -> Login/Group Role
+```
+
+Параметры:
+
+```
+Name: corpmarket_user
+Password: your_password
+Can login: Yes
+```
+
+Остальные права администратора выдавать не нужно.
+
+---
+
+### Создание базы данных
+
+Создать базу:
+
+```
+Databases
+    -> Create
+    -> Database
+```
+
+Параметры:
+
+```
+Database: corporate_market
+Owner: corpmarket_user
+```
+
+---
+
+## Подготовка базы данных
 
 Перейти в директорию с `manage.py`:
 
@@ -167,7 +200,7 @@ python manage.py migrate
 
 ---
 
-# Создание администратора Django
+## Создание администратора Django
 
 ```bash
 python manage.py createsuperuser
@@ -181,7 +214,7 @@ http://127.0.0.1:8000/admin/
 
 ---
 
-# Запуск проекта
+## Запуск проекта
 
 ```bash
 python manage.py runserver
@@ -191,21 +224,4 @@ python manage.py runserver
 
 ```
 http://127.0.0.1:8000/
-```
-# 🐳 Запуск через Docker (Альтернативный способ)
-
-Если в проекте настроен Docker, вы можете запустить его изолированно, не настраивая локальный PostgreSQL и Python-окружение:
-
-Соберите образ и поднимите контейнеры в фоновом режиме:
-```
-    Bash
-    docker-compose up -d --build
-```
-Выполните миграции внутри работающего контейнера:
-```Bash
-docker-compose exec web python CorpMarket/manage.py migrate
-```
-
-```Bash
-docker-compose exec web python CorpMarket/manage.py createsuperuser
 ```
