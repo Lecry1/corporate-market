@@ -77,6 +77,18 @@ class AdvertListView(ListView):
 
         return queryset.order_by(ordering)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context["categories"] = Advert.Category.choices
+
+        query_params = self.request.GET.copy()
+        query_params.pop("page", None)
+
+        context["query_string"] = query_params.urlencode()
+
+        return context
+
 
 class AdvertDetailView(DetailView):
     model = Advert
