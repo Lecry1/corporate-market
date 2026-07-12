@@ -21,11 +21,29 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(max_length=100, verbose_name='Название')),
                 ('description', models.TextField(verbose_name='Описание')),
                 ('price', models.PositiveIntegerField(blank=True, null=True, verbose_name='Цена')),
-                ('category', models.CharField(choices=[('product', 'Товар'), ('service', 'Услуга'), ('event', 'Мероприятие')], max_length=20, verbose_name='Категория')),
-                ('status', models.CharField(choices=[('active', 'Активно'), ('completed', 'Выполнено/продано'), ('archived', 'Архивировано')], default='active', max_length=20, verbose_name='Статус')),
+                (
+                    'category',
+                    models.CharField(
+                        choices=[('product', 'Товар'), ('service', 'Услуга'), ('event', 'Мероприятие')], max_length=20,
+                        verbose_name='Категория'
+                    )
+                ),
+                (
+                    'status',
+                    models.CharField(
+                        choices=[('active', 'Активно'), ('completed', 'Выполнено/продано'),
+                                 ('archived', 'Архивировано')], default='active', max_length=20, verbose_name='Статус'
+                    )
+                ),
                 ('address', models.CharField(blank=True, max_length=255, verbose_name='Адрес')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')),
-                ('seller', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='adverts', to=settings.AUTH_USER_MODEL, verbose_name='Продавец')),
+                (
+                    'seller',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='adverts',
+                        to=settings.AUTH_USER_MODEL, verbose_name='Продавец'
+                    )
+                ),
             ],
             options={
                 'verbose_name': 'Объявление',
