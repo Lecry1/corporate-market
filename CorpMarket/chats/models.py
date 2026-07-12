@@ -36,6 +36,10 @@ class Chat(models.Model):
     def __str__(self):
         return f"Чат по '{self.advert.title}' между {self.buyer} и {self.seller}"
 
+    @property
+    def last_message(self):
+        return self.messages.first()
+
     def get_unread_count(self, user):
         return self.messages.filter(is_read=False).exclude(sender=user).count()
 

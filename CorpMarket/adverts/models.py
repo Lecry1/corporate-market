@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.urls import reverse
 
 
 class Advert(models.Model):
@@ -42,6 +43,9 @@ class Advert(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("adverts:detail", kwargs={"pk": self.pk})
 
     @property
     def is_expired(self):
