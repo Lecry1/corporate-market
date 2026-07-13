@@ -6,6 +6,16 @@
 
 ---
 
+## Проект выполняли:
+
+- **Глебов Владислав Сергеевич**
+- Лямин Егор Алексеевич
+- Соколов Сергей Константинович
+- Дашкин Рушан Ряшидович
+- Гущин Александр Сергеевич
+
+---
+
 ## Стек технологий
 
 - Python 3.12
@@ -58,6 +68,7 @@ source .venv/bin/activate
 ## Установка зависимостей
 
 ```bash
+pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
@@ -104,6 +115,8 @@ DB_PORT=5432
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+--- 
+
 # 🐳 Запуск через Docker
 
 Если в проекте настроен Docker, вы можете запустить его изолированно, не настраивая локальный PostgreSQL и Python-окружение:
@@ -135,93 +148,101 @@ docker compose logs -f db
 docker compose down -v
 ```
 
-
----
-
-# Запуск локально (Альтернативный вариант для разработки)
-## Настройка PostgreSQL
-
-Через pgAdmin:
-
-### Создание пользователя
-
-Создать пользователя PostgreSQL для приложения:
-
-```
-Login/Group Roles
-    -> Create
-    -> Login/Group Role
-```
-
-Параметры:
-
-```
-Name: corpmarket_user
-Password: your_password
-Can login: Yes
-```
-
-Остальные права администратора выдавать не нужно.
-
----
-
-### Создание базы данных
-
-Создать базу:
-
-```
-Databases
-    -> Create
-    -> Database
-```
-
-Параметры:
-
-```
-Database: corporate_market
-Owner: corpmarket_user
-```
-
----
-
-## Подготовка базы данных
-
-Перейти в директорию с `manage.py`:
-
-```bash
-cd CorpMarket
-```
-
-Применить миграции:
-
-```bash
-python manage.py migrate
-```
-
----
-
-## Создание администратора Django
-
-```bash
-python manage.py createsuperuser
-```
-
-После создания администратор доступен в панели:
-
-```
-http://127.0.0.1:8000/admin/
-```
-
----
-
-## Запуск проекта
-
-```bash
-python manage.py runserver
-```
-
-После запуска приложение доступно:
+## После запуска приложение доступно:
 
 ```
 http://127.0.0.1:8000/
 ```
+
+# Модели
+
+- **Users**  
+  Хранит данные сотрудников компании. Используется как основная пользовательская сущность.  
+  Поля:  
+  - `photo` — фото профиля  
+  - `address` — адрес  
+  - `buyer_rating` — рейтинг как покупателя  
+  - `seller_rating` — рейтинг как продавца  
+
+- **Credentials**  
+  Хранит данные для входа пользователя в систему.  
+  Поля:  
+  - `user` — OneToOne → `Users`  
+  - `login` — уникальный логин  
+  - `password_hash` — хеш пароля  
+
+- **Admin**  
+  Хранит информацию о пользователях с правами администратора.  
+  Поля:  
+  - `user` — OneToOne → `Users`  
+
+- **Adverts**  
+  Основная сущность; хранит объявления пользователей о товарах, услугах или поездках.  
+  Поля:  
+  - `seller` — ForeignKey → `Users`  
+  - `status` — статус (активно, выполнено, архивировано)  
+  - `category` — категория (товар, услуга, мероприятие)  
+  - `created_at` — дата создания  
+  - `title` — заголовок  
+  - `price` — цена  
+  - `description` — описание  
+  - `address` — адрес
+
+- **Photos**  
+  Хранит фотографии, прикреплённые к объявлению.  
+  Поля:  
+  - `advert` — ForeignKey → `Adverts`  
+  - `photo` — изображение  
+
+- **Chats**  
+  Хранит диалоги между автором объявления и заинтересованным пользователем.  
+  Поля:  
+  - `advert` — ForeignKey → `Adverts`  
+  - `seller` — ForeignKey → `Users`  
+  - `buyer` — ForeignKey → `Users`  
+
+- **Messages**  
+  Хранит сообщения внутри чата.  
+  Поля:  
+  - `chat` — ForeignKey → `Chats`  
+  - `user` — ForeignKey → `Users` (отправитель)  
+  - `created_at` — дата отправки  
+  - `message` — текст сообщения  
+
+- **Reviews**  
+  Хранит отзывы по завершённым сделкам.  
+  Поля:  
+  - `from_user` — ForeignKey → `Users` (автор отзыва)  
+  - `to_user` — ForeignKey → `Users` (получатель отзыва)  
+  - `advert` — ForeignKey → `Adverts`  
+  - `flag` — кому оставлен отзыв (покупателю или продавцу)  
+  - `rating` — оценка (1–5)  
+  - `comment` — текст отзыва
+
+## Связи
+- **Users → Adverts / Reviews / Chats / Messages**: один ко многим.
+- **Adverts → Photos / Reviews / Chats**: один ко многим.
+- **Chats → Messages**: один ко многим.
+- **Users → Credentials / Admin**: один к одному.
+
+## ER-диаграмма базы данных
+![image 20](./docs/images/image_20.png)
+
+---
+
+# Скриншоты
+
+- **Авторизация и Регистрация**
+![image 2](./docs/images/image_2.png)
+
+![image 3](./docs/images/image_3.png)
+
+- **Детальный просмотр объявления**
+![image 5](./docs/images/image_5.png)
+
+- **Список объявлений** 
+![image 15](./docs/images/image_15.png)
+
+- **Просмотр профиля**
+![image 18](./docs/images/image_18.png)
+
