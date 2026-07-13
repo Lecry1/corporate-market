@@ -1,0 +1,779 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Чат с {{ other_user.display_name }} — КорпМаркет
+{% endblock %}
+
+{% block content %}
+<style>
+    /*
+     * На странице чата прокручивается только область сообщений,
+     * а не вся страница.
+     */
+    body {
+        overflow: hidden;
+    }
+
+    .chat-layout {
+        height: calc(100vh - 96px);
+        min-height: 480px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .chat-top {
+        flex: 0 0 auto;
+    }
+
+    .chat-messages-card {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .chat-messages-card > .card-body {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .chat-messages {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        padding-right: 0.35rem;
+    }
+
+    .chat-composer {
+        flex: 0 0 auto;
+    }
+
+    .chat-message-bubble {
+        max-width: min(78%, 680px);
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * Уменьшенная миниатюра объявления.
+     */
+    .chat-advert-image,
+    .chat-advert-placeholder {
+        width: 88px;
+        height: 64px;
+    }
+
+    .chat-advert-image {
+        object-fit: cover;
+    }
+
+    .chat-advert-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /*
+     * Компактное поле ввода.
+     * По мере ввода оно увеличивается до 84 px.
+     */
+    #chat-message-form textarea {
+        min-height: 36px;
+        max-height: 84px;
+        resize: none;
+        padding-top: 0.375rem;
+        padding-bottom: 0.375rem;
+    }
+
+    @media (max-width: 767.98px) {
+        /*
+         * На маленьких экранах полностью запрещать прокрутку страницы
+         * опасно: элементы могут не поместиться по высоте.
+         */
+        body {
+            overflow: auto;
+        }
+
+        .chat-layout {
+            height: auto;
+            min-height: calc(100vh - 90px);
+        }
+
+        .chat-messages-card {
+            height: 60vh;
+            min-height: 340px;
+            flex: none;
+        }
+
+        .chat-message-bubble {
+            max-width: 90%;
+        }
+
+        .chat-advert-image,
+        .chat-advert-placeholder {
+            width: 76px;
+            height: 60px;
+        }
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10">
+        <div class="chat-layout">
+
+            {# Верхняя фиксированная часть #}
+            <div class="chat-top">
+                <div class="d-flex justify-content-between
+                            align-items-center gap-3 mb-1">
+                    <div class="text-truncate">
+                        <span class="text-body-secondary small">
+                            Чат с
+                        </span>
+
+                        <a
+                            href="{% url 'users:profile-detail' other_user.pk %}"
+                            class="fw-semibold text-decoration-none
+                                   link-body-emphasis ms-1"
+                        >
+                            {{ other_user.display_name }}
+                        </a>
+                    </div>
+
+                    <a
+                        href="{% url 'chats:list' %}"
+                        class="btn btn-sm btn-outline-secondary text-nowrap"
+                    >
+                        Все чаты
+                    </a>
+                </div>
+
+                {# Компактная карточка объявления #}
+                <a
+                    href="{{ chat.advert.get_absolute_url }}"
+                    class="card border-0 shadow-sm text-decoration-none
+                           link-body-emphasis mb-1 overflow-hidden"
+                >
+                    <div class="row g-0 align-items-stretch">
+                        <div class="col-auto">
+                            {% if chat.advert.main_photo %}
+                                <img
+                                    src="{{ chat.advert.main_photo.image.url }}"
+                                    alt="Фото объявления {{ chat.advert.title }}"
+                                    class="chat-advert-image d-block"
+                                >
+                            {% else %}
+                                <div
+                                    class="chat-advert-placeholder
+                                           bg-body-secondary
+                                           text-body-secondary"
+                                >
+                                    <span class="small">
+                                        Нет фото
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col min-width-0">
+                            <div class="card-body py-1 px-2">
+                                <div class="d-flex justify-content-between
+                                            align-items-start gap-2">
+                                    <div class="fw-semibold text-truncate">
+                                        {{ chat.advert.title }}
+                                    </div>
+
+                                    {% if chat.advert.status == "active" %}
+                                        <span class="badge text-bg-success">
+                                            {{ chat.advert.get_status_display }}
+                                        </span>
+                                    {% elif chat.advert.status == "completed" %}
+                                        <span class="badge text-bg-primary">
+                                            {{ chat.advert.get_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">
+                                            {{ chat.advert.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="small text-body-secondary">
+                                    {% if chat.advert.is_price_negotiable %}
+                                        Договорная
+                                    {% else %}
+                                        {{ chat.advert.price }} ₽
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                {# Отзыв после завершения сделки #}
+                {% if can_leave_review %}
+                    <div class="alert alert-success py-1 px-2 mb-1
+                                d-flex justify-content-between
+                                align-items-center gap-3">
+                        <div class="small">
+                            Сделка завершена. Оцените пользователя
+                            <strong>{{ other_user.display_name }}</strong>.
+                        </div>
+
+                        <a
+                            class="btn btn-sm btn-success text-nowrap"
+                            href="{% url 'reviews:create' chat.pk %}"
+                        >
+                            Оставить отзыв
+                        </a>
+                    </div>
+                {% elif review_exists %}
+                    <div class="alert alert-light border py-1 px-2 mb-1 small">
+                        Отзыв по этой сделке уже оставлен.
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Окно сообщений с собственной прокруткой #}
+            <section class="chat-messages-card card border-0 shadow-sm mb-1">
+                <div class="card-body p-2">
+
+                    {% if message_page.has_next %}
+                        <div class="text-center mb-2">
+                            <a
+                                class="btn btn-sm btn-outline-secondary"
+                                href="?page={{ message_page.next_page_number }}"
+                            >
+                                Показать более ранние сообщения
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <div
+                        id="chat-messages"
+                        class="chat-messages d-flex flex-column gap-2"
+                        aria-live="polite"
+                    >
+                        {% for chat_message in chat_messages %}
+                            <div
+                                class="chat-message d-flex
+                                       {% if chat_message.sender == user %}
+                                           justify-content-end
+                                       {% else %}
+                                           justify-content-start
+                                       {% endif %}"
+                                data-message-id="{{ chat_message.pk }}"
+                            >
+                                <article
+                                    class="chat-message-bubble rounded-3 px-3 py-2
+                                           {% if chat_message.sender == user %}
+                                               bg-primary text-white
+                                           {% else %}
+                                               bg-body-secondary
+                                           {% endif %}"
+                                >
+                                    <div class="d-flex justify-content-between
+                                                align-items-center gap-3 mb-1">
+                                        {% if chat_message.sender == user %}
+                                            <strong class="small">
+                                                Вы
+                                            </strong>
+                                        {% else %}
+                                            <a
+                                                href="{% url 'users:profile-detail' chat_message.sender.pk %}"
+                                                class="small fw-semibold
+                                                       text-decoration-none
+                                                       link-body-emphasis"
+                                            >
+                                                {{ chat_message.sender.display_name }}
+                                            </a>
+                                        {% endif %}
+
+                                        <time
+                                            class="small text-nowrap
+                                                   {% if chat_message.sender == user %}
+                                                       text-white-50
+                                                   {% else %}
+                                                       text-body-secondary
+                                                   {% endif %}"
+                                        >
+                                            {{ chat_message.created_at|date:"d.m.Y H:i" }}
+                                        </time>
+                                    </div>
+
+                                    <div>
+                                        {{ chat_message.text|linebreaksbr }}
+                                    </div>
+                                </article>
+                            </div>
+                        {% empty %}
+                            <div
+                                id="empty-chat-message"
+                                class="text-center my-auto py-5"
+                            >
+                                <p class="text-body-secondary mb-0">
+                                    Сообщений пока нет.
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            {# Компактная фиксированная строка отправки сообщения #}
+            <div class="chat-composer">
+                {% if chat.is_active %}
+                    <section class="card border-0 shadow-sm">
+                        <div class="card-body p-1">
+                            <form
+                                method="post"
+                                id="chat-message-form"
+                            >
+                                {% csrf_token %}
+
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger py-1 mb-1">
+                                        {{ form.non_field_errors }}
+                                    </div>
+                                {% endif %}
+
+                                <label
+                                    class="visually-hidden"
+                                    for="{{ form.text.id_for_label }}"
+                                >
+                                    {{ form.text.label }}
+                                </label>
+
+                                <div class="input-group">
+                                    {{ form.text }}
+
+                                    <button
+                                        class="btn btn-primary btn-sm px-3"
+                                        type="submit"
+                                        id="chat-message-submit"
+                                    >
+                                        Отправить
+                                    </button>
+                                </div>
+
+                                <div class="d-flex justify-content-between
+                                            align-items-center gap-2 mt-0 px-1">
+                                    <small class="text-body-secondary">
+                                        Ctrl+Enter
+                                    </small>
+
+                                    <small
+                                        id="chat-connection-status"
+                                        class="text-body-secondary"
+                                    ></small>
+                                </div>
+
+                                {% for error in form.text.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                            </form>
+                        </div>
+                    </section>
+                {% else %}
+                    <div class="alert alert-secondary mb-0 py-1 px-2">
+                        Чат закрыт. Отправка новых сообщений недоступна.
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const messagesContainer = document.getElementById(
+            "chat-messages"
+        );
+
+        if (!messagesContainer) {
+            return;
+        }
+
+        const form = document.getElementById(
+            "chat-message-form"
+        );
+        const messageField = document.getElementById(
+            "{{ form.text.id_for_label }}"
+        );
+        const submitButton = document.getElementById(
+            "chat-message-submit"
+        );
+        const connectionStatus = document.getElementById(
+            "chat-connection-status"
+        );
+
+        const messagesUrl = "{% url 'chats:messages' chat.pk %}";
+        const profileUrlTemplate =
+            "{% url 'users:profile-detail' 999999999 %}";
+
+        let sendInProgress = false;
+        let pollingInProgress = false;
+
+        function setConnectionStatus(text, isError = false) {
+            if (!connectionStatus) {
+                return;
+            }
+
+            connectionStatus.textContent = text;
+            connectionStatus.classList.toggle(
+                "text-danger",
+                isError
+            );
+            connectionStatus.classList.toggle(
+                "text-body-secondary",
+                !isError
+            );
+        }
+
+        function hasMessage() {
+            return (
+                messageField
+                && messageField.value.trim().length > 0
+            );
+        }
+
+        function updateSubmitButton() {
+            if (!submitButton) {
+                return;
+            }
+
+            submitButton.disabled = (
+                !hasMessage()
+                || sendInProgress
+            );
+        }
+
+        function isNearBottom() {
+            const distanceFromBottom =
+                messagesContainer.scrollHeight
+                - messagesContainer.scrollTop
+                - messagesContainer.clientHeight;
+
+            return distanceFromBottom < 120;
+        }
+
+        function scrollToBottom(behavior = "auto") {
+            messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: behavior,
+            });
+        }
+
+        function getLastMessageId() {
+            const messageElements =
+                messagesContainer.querySelectorAll(
+                    "[data-message-id]"
+                );
+
+            if (messageElements.length === 0) {
+                return 0;
+            }
+
+            return Number(
+                messageElements[
+                    messageElements.length - 1
+                ].dataset.messageId
+            );
+        }
+
+        function escapeHtml(value) {
+            const element = document.createElement("div");
+            element.textContent = String(value ?? "");
+            return element.innerHTML;
+        }
+
+        function getProfileUrl(userId) {
+            return profileUrlTemplate.replace(
+                "999999999",
+                String(userId)
+            );
+        }
+
+        function renderMessage(message) {
+            const existingMessage =
+                messagesContainer.querySelector(
+                    `[data-message-id="${message.id}"]`
+                );
+
+            if (existingMessage) {
+                return;
+            }
+
+            const emptyChatMessage =
+                document.getElementById(
+                    "empty-chat-message"
+                );
+
+            if (emptyChatMessage) {
+                emptyChatMessage.remove();
+            }
+
+            const wrapper = document.createElement("div");
+
+            wrapper.className = message.is_own
+                ? "chat-message d-flex justify-content-end"
+                : "chat-message d-flex justify-content-start";
+
+            wrapper.dataset.messageId = message.id;
+
+            const bubbleClass = message.is_own
+                ? "bg-primary text-white"
+                : "bg-body-secondary";
+
+            const dateClass = message.is_own
+                ? "text-white-50"
+                : "text-body-secondary";
+
+            const senderHtml = message.is_own
+                ? `<strong class="small">Вы</strong>`
+                : `
+                    <a
+                        href="${getProfileUrl(message.sender.id)}"
+                        class="small fw-semibold
+                               text-decoration-none
+                               link-body-emphasis"
+                    >
+                        ${escapeHtml(message.sender.display_name)}
+                    </a>
+                `;
+
+            const messageText = escapeHtml(
+                message.text
+            ).replace(/\n/g, "<br>");
+
+            wrapper.innerHTML = `
+                <article
+                    class="chat-message-bubble rounded-3
+                           px-3 py-2 ${bubbleClass}"
+                >
+                    <div
+                        class="d-flex justify-content-between
+                               align-items-center gap-3 mb-1"
+                    >
+                        ${senderHtml}
+
+                        <time class="small text-nowrap ${dateClass}">
+                            ${escapeHtml(message.created_at)}
+                        </time>
+                    </div>
+
+                    <div>${messageText}</div>
+                </article>
+            `;
+
+            messagesContainer.appendChild(wrapper);
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+
+            if (
+                !form
+                || !messageField
+                || !hasMessage()
+                || sendInProgress
+            ) {
+                if (messageField) {
+                    messageField.focus();
+                }
+
+                return;
+            }
+
+            sendInProgress = true;
+            updateSubmitButton();
+            setConnectionStatus("Отправка…");
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(
+                    form.action || window.location.href,
+                    {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest",
+                        },
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Не удалось отправить сообщение."
+                    );
+                }
+
+                renderMessage(data.message);
+
+                messageField.value = "";
+                messageField.style.height = "";
+                scrollToBottom("smooth");
+
+                setConnectionStatus("");
+            } catch (error) {
+                console.error(error);
+
+                setConnectionStatus(
+                    "Ошибка отправки",
+                    true
+                );
+            } finally {
+                sendInProgress = false;
+                updateSubmitButton();
+                messageField.focus();
+            }
+        }
+
+        async function loadNewMessages() {
+            if (pollingInProgress) {
+                return;
+            }
+
+            pollingInProgress = true;
+
+            const lastMessageId = getLastMessageId();
+
+            try {
+                const response = await fetch(
+                    `${messagesUrl}?after=${lastMessageId}`,
+                    {
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Не удалось получить сообщения."
+                    );
+                }
+
+                const data = await response.json();
+
+                if (!data.messages.length) {
+                    setConnectionStatus("");
+                    return;
+                }
+
+                const shouldScroll = isNearBottom();
+
+                data.messages.forEach(renderMessage);
+
+                if (shouldScroll) {
+                    scrollToBottom("smooth");
+                }
+
+                setConnectionStatus("");
+            } catch (error) {
+                console.error(
+                    "Ошибка получения сообщений:",
+                    error
+                );
+
+                setConnectionStatus(
+                    "Нет соединения",
+                    true
+                );
+            } finally {
+                pollingInProgress = false;
+            }
+        }
+
+        function resizeMessageField() {
+            if (!messageField) {
+                return;
+            }
+
+            messageField.style.height = "auto";
+
+            const newHeight = Math.min(
+                messageField.scrollHeight,
+                84
+            );
+
+            messageField.style.height =
+                `${newHeight}px`;
+        }
+
+        if (form && messageField && submitButton) {
+            messageField.addEventListener(
+                "input",
+                function () {
+                    updateSubmitButton();
+                    resizeMessageField();
+                }
+            );
+
+            messageField.addEventListener(
+                "keydown",
+                function (event) {
+                    if (
+                        event.ctrlKey
+                        && event.key === "Enter"
+                    ) {
+                        event.preventDefault();
+
+                        if (hasMessage()) {
+                            form.requestSubmit();
+                        }
+                    }
+                }
+            );
+
+            form.addEventListener(
+                "submit",
+                sendMessage
+            );
+
+            updateSubmitButton();
+            resizeMessageField();
+            messageField.focus();
+        }
+
+        /*
+         * При первом открытии чата показываем последние сообщения.
+         */
+        requestAnimationFrame(function () {
+            scrollToBottom();
+        });
+
+        /*
+         * Polling: новые сообщения другого пользователя появляются
+         * без ручной перезагрузки, максимум примерно через 2 секунды.
+         */
+        window.setInterval(
+            loadNewMessages,
+            2000
+        );
+
+        /*
+         * После возвращения на вкладку сразу проверяем новые сообщения.
+         */
+        document.addEventListener(
+            "visibilitychange",
+            function () {
+                if (!document.hidden) {
+                    loadNewMessages();
+                }
+            }
+        );
+    });
+</script>
+{% endblock %}

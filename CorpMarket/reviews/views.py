@@ -1,124 +1,105 @@
 from adverts.models import Advert
+from chats.models import Chat
+from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Count, Q
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
-
-from .models import Review
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.views.generic import CreateView, ListView
+from reviews.forms import ReviewForm
+from reviews.models import Review
 
 User = get_user_model()
 
 
-def get_reviews_about_user(request, user_id):
-    # Получить все отзывы, где пользователь — получатель (отзывы о пользователе)
-    user = get_object_or_404(User, id=user_id)
-    reviews = Review.objects.filter(to_user=user).select_related('from_user', 'advert')
+class ReviewCreateView(LoginRequiredMixin, CreateView):
+    form_class = ReviewForm
+    template_name = 'reviews/review_form.html'
 
-    context = {
-        'user': user,
-        'reviews': reviews,
-        'count': reviews.count(),
-    }
-    return render(request, 'reviews/about_user.html', context)
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            participant_filter = Q(buyer=request.user) | Q(seller=request.user)
+            self.chat = get_object_or_404(
+                Chat.objects.filter(participant_filter).select_related('advert', 'buyer', 'seller'),
+                pk=kwargs['chat_pk'],
+            )
+            self.reviewed_user = self.chat.get_other_user(request.user)
 
+            if self.chat.advert.status != Advert.Status.COMPLETED:
+                messages.error(request, 'Отзыв можно оставить только после завершения сделки.')
+                return redirect('chats:detail', pk=self.chat.pk)
 
-def get_reviews_by_user(request, user_id):
-    # Получить все отзывы, которые пользователь написал (его активность)
-    user = get_object_or_404(User, id=user_id)
-    reviews = Review.objects.filter(from_user=user).select_related('to_user', 'advert')
+            if Review.objects.filter(
+                from_user=request.user,
+                to_user=self.reviewed_user,
+                advert=self.chat.advert,
+            ).exists():
+                messages.info(request, 'Вы уже оставили отзыв этому пользователю по объявлению.')
+                return redirect('chats:detail', pk=self.chat.pk)
 
-    context = {
-        'user': user,
-        'reviews': reviews,
-    }
-    return render(request, 'reviews/by_user.html', context)
+        return super().dispatch(request, *args, **kwargs)
 
+    def form_valid(self, form):
+        form.instance.from_user = self.request.user
+        form.instance.to_user = self.reviewed_user
+        form.instance.advert = self.chat.advert
+        form.instance.flag = (
+            Review.Flag.TO_SELLER if self.reviewed_user == self.chat.advert.seller else Review.Flag.TO_BUYER
+        )
 
-def get_reviews_for_advert(request, advert_id):
-    # Получить все отзывы по конкретному объявлению
-    advert = get_object_or_404(Advert, id=advert_id)
-    reviews = Review.objects.filter(advert=advert).select_related('from_user', 'to_user')
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+        except IntegrityError:
+            messages.info(self.request, 'Вы уже оставили отзыв этому пользователю по объявлению.')
+            return redirect('chats:detail', pk=self.chat.pk)
+        except ValidationError as error:
+            form.add_error(None, ' '.join(error.messages))
+            return self.form_invalid(form)
 
-    context = {
-        'advert': advert,
-        'reviews': reviews,
-    }
-    return render(request, 'reviews/for_advert.html', context)
+        messages.success(self.request, 'Отзыв опубликован.')
+        return redirect(self.get_success_url())
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['chat'] = self.chat
+        context['reviewed_user'] = self.reviewed_user
+        return context
 
-def get_user_rating(request, user_id):
-    # Получить средний рейтинг пользователя и количество отзывов
-
-    user = get_object_or_404(User, id=user_id)
-
-    stats = Review.objects.filter(to_user=user).aggregate(
-        avg_rating=Avg('rating'),
-        total_reviews=Count('id'),
-        positive_count=Count('id', filter=Q(rating__gte=4)),
-        negative_count=Count('id', filter=Q(rating__lte=2)),
-    )
-
-    # Округление до десятых
-    if stats['avg_rating']:
-        stats['avg_rating'] = round(stats['avg_rating'], 1)
-
-    context = {
-        'user': user,
-        'stats': stats,
-    }
-    return render(request, 'reviews/user_rating.html', context)
+    def get_success_url(self):
+        return reverse('chats:detail', kwargs={'pk': self.chat.pk})
 
 
-def get_reviews_to_seller(request, user_id):
-    # Получить все отзывы о пользователе как о продавце (через его объявления)
-    user = get_object_or_404(User, id=user_id)
-    reviews = Review.objects.filter(advert__seller=user).select_related('from_user', 'advert')
+class UserReviewListView(ListView):
+    model = Review
+    template_name = 'reviews/user_review_list.html'
+    context_object_name = 'reviews'
+    paginate_by = 20
 
-    context = {
-        'user': user,
-        'reviews': reviews,
-        'title': f'Отзывы о продавце {user.username}',
-    }
-    return render(request, 'reviews/about_user.html', context)
+    def get_queryset(self):
+        self.review_user = get_object_or_404(User, pk=self.kwargs['user_pk'])
+        return Review.objects.filter(to_user=self.review_user).select_related('from_user', 'to_user', 'advert')
 
-
-def get_recent_reviews(request, user_id):
-    # Получить 10 самых свежих отзывов о пользователе
-    user = get_object_or_404(User, id=user_id)
-    reviews = Review.objects.filter(to_user=user).order_by('-created_at')[:10]
-
-    context = {
-        'user': user,
-        'reviews': reviews,
-    }
-    return render(request, 'reviews/recent.html', context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['review_user'] = self.review_user
+        return context
 
 
-#  --- API (JSON) версия для микросервисной архитектуры ---
+class AdvertReviewListView(ListView):
+    model = Review
+    template_name = 'reviews/advert_review_list.html'
+    context_object_name = 'reviews'
+    paginate_by = 20
 
+    def get_queryset(self):
+        self.advert = get_object_or_404(Advert.objects.select_related('seller'), pk=self.kwargs['advert_pk'])
+        return Review.objects.filter(advert=self.advert).select_related('from_user', 'to_user')
 
-def api_user_reviews(request, user_id):
-    # API-эндпоинт: получить все отзывы о пользователе в JSON
-    user = get_object_or_404(User, id=user_id)
-    reviews = Review.objects.filter(to_user=user).select_related('from_user', 'advert')
-
-    data = {
-        'user_id':
-        user.id,
-        'username':
-        user.username,
-        'total_reviews':
-        reviews.count(),
-        'avg_rating':
-        reviews.aggregate(Avg('rating'))['rating__avg'],
-        'reviews': [{
-            'id': r.id,
-            'from_user': r.from_user.username,
-            'rating': r.rating,
-            'comment': r.comment,
-            'created_at': r.created_at.isoformat(),
-            'flag': r.get_flag_display(),
-            'advert_title': r.advert.title,
-        } for r in reviews]
-    }
-    return JsonResponse(data)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['advert'] = self.advert
+        return context
