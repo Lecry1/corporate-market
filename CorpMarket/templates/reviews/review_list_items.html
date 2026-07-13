@@ -1,0 +1,59 @@
+{% if reviews %}
+    <div class="vstack gap-3">
+        {% for review in reviews %}
+            <article class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between gap-3 mb-2">
+                        <strong>{{ review.from_user.display_name }}</strong>
+                        <span class="badge text-bg-warning">{{ review.rating }} / 5</span>
+                    </div>
+
+                    <div class="text-muted small mb-2">
+                        {{ review.get_flag_display }} · {{ review.created_at|date:"d.m.Y H:i" }}
+                    </div>
+
+                    <div class="small mb-2">
+                        Получатель:
+                        <a href="{% url 'reviews:user-list' review.to_user.pk %}">
+                            {{ review.to_user.display_name }}
+                        </a>
+                    </div>
+
+                    <a class="d-block mb-2" href="{{ review.advert.get_absolute_url }}">
+                        {{ review.advert.title }}
+                    </a>
+
+                    {% if review.comment %}
+                        <div>{{ review.comment|linebreaksbr }}</div>
+                    {% else %}
+                        <div class="text-muted">Без комментария</div>
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">Отзывов пока нет.</div>
+{% endif %}
+
+{% if is_paginated %}
+    <nav class="mt-4" aria-label="Навигация по страницам отзывов">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперёд</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}

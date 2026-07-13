@@ -6,6 +6,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+
     path(
         "",
         include(
@@ -13,8 +14,13 @@ urlpatterns = [
             namespace="users",
         ),
     ),
+
+    path("chats/", include("chats.urls")),
+    path("reviews/", include("reviews.urls")),
+
     path("", include("adverts.urls")),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(
