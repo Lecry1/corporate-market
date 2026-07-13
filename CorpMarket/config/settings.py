@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'adverts.apps.AdvertsConfig',
     'chats.apps.ChatsConfig',
     'reviews.apps.ReviewsConfig',
+    'chats.apps.ChatsConfig',
 ]
 
 MIDDLEWARE = [
