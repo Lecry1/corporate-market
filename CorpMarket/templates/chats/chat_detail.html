@@ -5,9 +5,12 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
-        <h1 class="h3">
+        <h1 class="h3 mb-3">
             Чат с
-            <a href="{% url 'reviews:user-list' other_user.pk %}">
+            <a
+                href="{% url 'users:profile-detail' other_user.pk %}"
+                class="text-decoration-none"
+            >
                 {{ other_user.display_name }}
             </a>
         </h1>

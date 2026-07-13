@@ -9,8 +9,8 @@ from django.db.models import Avg, Q
 class Review(models.Model):
 
     class Flag(models.TextChoices):
-        TO_BUYER = "to_buyer", "Покупателю"
-        TO_SELLER = "to_seller", "Продавцу"
+        TO_BUYER = "to_buyer", "От продавца"
+        TO_SELLER = "to_seller", "От покупателя"
 
     from_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews_left",
