@@ -17,7 +17,7 @@
     {% endif %}
 </h1>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
 
     {% for error in form.non_field_errors %}
@@ -48,6 +48,61 @@
         </div>
     {% endfor %}
 
+    <hr class="my-4">
+
+    <h2 class="h4 mb-3">Фотографии</h2>
+    <p class="text-muted">Можно загрузить до 5 фотографий. Минимум одно фото обязательно.</p>
+
+    {{ photo_formset.non_form_errors }}
+    {{ photo_formset.management_form }}
+
+    <div id="photo-forms">
+        {% for photo_form in photo_formset %}
+            <div class="card mb-3 photo-form-item">
+                <div class="card-body">
+                    {% for hidden_field in photo_form.hidden_fields %}
+                        {{ hidden_field }}
+                    {% endfor %}
+
+                    <div class="mb-2">
+                        <label class="form-label" for="{{ photo_form.image.id_for_label }}">Фото</label>
+                        {{ photo_form.image }}
+                        {% for error in photo_form.image.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {% if photo_form.instance.pk and photo_formset.can_delete %}
+                        <div class="form-check mt-2">
+                            {{ photo_form.DELETE }}
+                            <label class="form-check-label" for="{{ photo_form.DELETE.id_for_label }}">Удалить это фото</label>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <template id="empty-photo-form-template">
+        <div class="card mb-3 photo-form-item">
+            <div class="card-body">
+                {% for hidden_field in photo_formset.empty_form.hidden_fields %}
+                    {{ hidden_field }}
+                {% endfor %}
+
+                <div class="mb-2">
+                    <label class="form-label" for="{{ photo_formset.empty_form.image.id_for_label }}">Фото</label>
+                    {{ photo_formset.empty_form.image }}
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div class="d-flex gap-2 mb-4">
+        <button type="button" id="add-photo-btn" class="btn btn-outline-primary">Добавить фото</button>
+        <span class="text-muted align-self-center">До 5 фотографий</span>
+    </div>
+
     <button class="btn btn-primary" type="submit">
         {% if object %}
             Сохранить изменения
@@ -66,4 +121,37 @@
         </a>
     {% endif %}
 </form>
+
+<script>
+    (function () {
+        const maxPhotos = 5;
+        const formContainer = document.getElementById("photo-forms");
+        const addButton = document.getElementById("add-photo-btn");
+        const template = document.getElementById("empty-photo-form-template");
+        const totalFormsInput = document.querySelector("input[name$='-TOTAL_FORMS']");
+
+        if (!formContainer || !addButton || !template || !totalFormsInput) {
+            return;
+        }
+
+        const updateButtonState = () => {
+            const totalForms = Number(totalFormsInput.value);
+            addButton.disabled = totalForms >= maxPhotos;
+        };
+
+        addButton.addEventListener("click", () => {
+            const totalForms = Number(totalFormsInput.value);
+            if (totalForms >= maxPhotos) {
+                return;
+            }
+
+            const html = template.innerHTML.replace(/__prefix__/g, String(totalForms));
+            formContainer.insertAdjacentHTML("beforeend", html);
+            totalFormsInput.value = String(totalForms + 1);
+            updateButtonState();
+        });
+
+        updateButtonState();
+    })();
+</script>
 {% endblock %}
