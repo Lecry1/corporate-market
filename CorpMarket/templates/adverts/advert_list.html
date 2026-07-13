@@ -157,6 +157,19 @@
 
         <div class="card h-100">
 
+            {% if advert.main_photo %}
+                <img
+                    src="{{ advert.main_photo.image.url }}"
+                    class="card-img-top"
+                    alt="{{ advert.title }}"
+                    style="object-fit: cover; aspect-ratio: 16 / 10;"
+                >
+            {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 16 / 10;">
+                    Фото отсутствует
+                </div>
+            {% endif %}
+
             <div class="card-body">
 
                 <h5 class="card-title">

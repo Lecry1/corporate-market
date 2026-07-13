@@ -2,6 +2,7 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin,
     UserPassesTestMixin,
 )
+from django.forms import inlineformset_factory
 from django.db.models import F, Q
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -12,7 +13,55 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .models import Advert
+from .models import Advert, Photo
+
+
+AdvertPhotoFormSet = inlineformset_factory(
+    Advert,
+    Photo,
+    fields=("image",),
+    extra=1,
+    max_num=5,
+    validate_max=True,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)
+
+
+class AdvertPhotoFormSetMixin:
+    formset_class = AdvertPhotoFormSet
+
+    def get_formset(self):
+        if self.request.method == "POST":
+            return self.formset_class(
+                self.request.POST,
+                self.request.FILES,
+                instance=self.object,
+            )
+
+        return self.formset_class(instance=self.object)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault("photo_formset", self.get_formset())
+        return context
+
+    def render_invalid(self, form, formset):
+        return self.render_to_response(
+            self.get_context_data(form=form, photo_formset=formset)
+        )
+
+    def form_valid(self, form):
+        photo_formset = self.get_formset()
+
+        if not photo_formset.is_valid():
+            return self.render_invalid(form, photo_formset)
+
+        response = super().form_valid(form)
+        photo_formset.instance = self.object
+        photo_formset.save()
+        return response
 
 
 class AdvertListView(ListView):
@@ -96,7 +145,11 @@ class AdvertDetailView(DetailView):
     context_object_name = "advert"
 
 
-class AdvertCreateView(LoginRequiredMixin, CreateView):
+class AdvertCreateView(
+    LoginRequiredMixin,
+    AdvertPhotoFormSetMixin,
+    CreateView,
+):
     model = Advert
     template_name = "adverts/advert_form.html"
     fields = (
@@ -107,13 +160,21 @@ class AdvertCreateView(LoginRequiredMixin, CreateView):
         "address",
     )
 
-    def form_valid(self, form):
-        form.instance.seller = self.request.user
-        return super().form_valid(form)
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        photo_formset = self.get_formset()
+
+        if form.is_valid() and photo_formset.is_valid():
+            form.instance.seller = self.request.user
+            return self.form_valid(form)
+
+        return self.render_invalid(form, photo_formset)
 
 
 class AdvertUpdateView(
     LoginRequiredMixin,
+    AdvertPhotoFormSetMixin,
     UserPassesTestMixin,
     UpdateView,
 ):
@@ -128,12 +189,26 @@ class AdvertUpdateView(
         "address",
     )
 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        photo_formset = self.get_formset()
+
+        if form.is_valid() and photo_formset.is_valid():
+            return self.form_valid(form)
+
+        return self.render_invalid(form, photo_formset)
+
     def test_func(self):
         advert = self.get_object()
         return (
             advert.seller == self.request.user
             or self.request.user.is_superuser
         )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        return response
 
 
 class AdvertDeleteView(
