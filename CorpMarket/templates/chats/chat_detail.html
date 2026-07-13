@@ -1,86 +1,293 @@
 {% extends "base.html" %}
 
-{% block title %}Чат с {{ other_user.display_name }} — КорпМаркет{% endblock %}
+{% block title %}
+    Чат с {{ other_user.display_name }} — КорпМаркет
+{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-    <div>
-        <h1 class="h3 mb-3">
-            Чат с
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-9 col-xl-8">
+
+        {# Заголовок чата #}
+        <div class="d-flex flex-column flex-md-row
+                    justify-content-between align-items-md-center
+                    gap-3 mb-3">
+            <div>
+                <p class="text-body-secondary small mb-1">
+                    Собеседник
+                </p>
+
+                <h1 class="h3 mb-0">
+                    <a
+                        href="{% url 'users:profile-detail' other_user.pk %}"
+                        class="link-body-emphasis text-decoration-none"
+                    >
+                        {{ other_user.display_name }}
+                    </a>
+                </h1>
+            </div>
+
             <a
-                href="{% url 'users:profile-detail' other_user.pk %}"
-                class="text-decoration-none"
+                href="{% url 'chats:list' %}"
+                class="btn btn-sm btn-outline-secondary"
             >
-                {{ other_user.display_name }}
+                К списку чатов
             </a>
-        </h1>
-        <a href="{{ chat.advert.get_absolute_url }}">{{ chat.advert.title }}</a>
-    </div>
+        </div>
 
-    {% if can_leave_review %}
-        <a class="btn btn-outline-success" href="{% url 'reviews:create' chat.pk %}">
-            Оставить отзыв
-        </a>
-    {% elif review_exists %}
-        <span class="badge text-bg-success">Отзыв оставлен</span>
-    {% endif %}
-</div>
 
-<div class="border rounded p-3 mb-4 bg-light" style="min-height: 320px;">
-    {% if message_page.has_next or message_page.has_previous %}
-        <nav class="d-flex justify-content-center gap-2 mb-3" aria-label="История сообщений">
-            {% if message_page.has_next %}
-                <a class="btn btn-sm btn-outline-secondary" href="?page={{ message_page.next_page_number }}">
-                    Более ранние сообщения
-                </a>
-            {% endif %}
-
-            {% if message_page.has_previous %}
-                <a class="btn btn-sm btn-outline-secondary" href="?page={{ message_page.previous_page_number }}">
-                    Более новые сообщения
-                </a>
-            {% endif %}
-        </nav>
-    {% endif %}
-
-    {% for chat_message in chat_messages %}
-        <div class="d-flex mb-3 {% if chat_message.sender == user %}justify-content-end{% endif %}">
-            <div
-                class="p-3 rounded {% if chat_message.sender == user %}bg-primary text-white{% else %}bg-white border{% endif %}"
-                style="max-width: 75%;"
-            >
-                <div class="small mb-1">
-                    {{ chat_message.sender.display_name }}
+        {# Карточка объявления с первой фотографией #}
+        <a
+            href="{{ chat.advert.get_absolute_url }}"
+            class="card border-0 shadow-sm text-decoration-none
+                   link-body-emphasis mb-3 overflow-hidden"
+        >
+            <div class="row g-0">
+                <div class="col-auto">
+                    {% if chat.advert.main_photo %}
+                        <img
+                            src="{{ chat.advert.main_photo.image.url }}"
+                            alt="Фото объявления {{ chat.advert.title }}"
+                            class="object-fit-cover"
+                            width="120"
+                            height="100"
+                        >
+                    {% else %}
+                        <div
+                            class="bg-body-secondary d-flex
+                                   align-items-center justify-content-center
+                                   text-body-secondary"
+                            style="width: 120px; height: 100px;"
+                        >
+                            <span class="small">
+                                Нет фото
+                            </span>
+                        </div>
+                    {% endif %}
                 </div>
-                <div>{{ chat_message.text|linebreaksbr }}</div>
-                <div class="small mt-2 {% if chat_message.sender == user %}text-white-50{% else %}text-muted{% endif %}">
-                    {{ chat_message.created_at|date:"d.m.Y H:i" }}
+
+                <div class="col">
+                    <div class="card-body py-3">
+                        <div class="d-flex flex-wrap
+                                    justify-content-between
+                                    align-items-start gap-2">
+                            <div>
+                                <p class="text-body-secondary small mb-1">
+                                    Объявление
+                                </p>
+
+                                <h2 class="h6 mb-1">
+                                    {{ chat.advert.title }}
+                                </h2>
+                            </div>
+
+                            {% if chat.advert.status == "active" %}
+                                <span class="badge text-bg-success">
+                                    {{ chat.advert.get_status_display }}
+                                </span>
+                            {% elif chat.advert.status == "completed" %}
+                                <span class="badge text-bg-primary">
+                                    {{ chat.advert.get_status_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">
+                                    {{ chat.advert.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="fw-semibold mt-2">
+                            {% if chat.advert.is_price_negotiable %}
+                                Договорная
+                            {% else %}
+                                {{ chat.advert.price }} ₽
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% empty %}
-        <p class="text-muted mb-0">Сообщений пока нет.</p>
-    {% endfor %}
+        </a>
+
+
+        {# Возможность оставить отзыв #}
+        {% if can_leave_review %}
+            <div class="alert alert-success d-flex flex-column flex-md-row
+                        justify-content-between align-items-md-center
+                        gap-3 mb-3">
+                <div>
+                    <strong>Сделка завершена</strong>
+
+                    <div class="small">
+                        Оцените взаимодействие с пользователем
+                        {{ other_user.display_name }}.
+                    </div>
+                </div>
+
+                <a
+                    class="btn btn-success text-nowrap"
+                    href="{% url 'reviews:create' chat.pk %}"
+                >
+                    Оставить отзыв
+                </a>
+            </div>
+        {% elif review_exists %}
+            <div class="alert alert-light border py-2 mb-3">
+                Отзыв этому пользователю по данной сделке уже оставлен.
+            </div>
+        {% endif %}
+
+
+        {# Сообщения #}
+        <section class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-3 p-md-4">
+
+                {# Навигация между страницами сообщений #}
+                {% if message_page.has_next or message_page.has_previous %}
+                    <nav
+                        class="d-flex justify-content-between
+                               align-items-center mb-3"
+                        aria-label="Навигация по сообщениям"
+                    >
+                        <div>
+                            {% if message_page.has_next %}
+                                <a
+                                    class="btn btn-sm btn-outline-secondary"
+                                    href="?page={{ message_page.next_page_number }}"
+                                >
+                                    Более ранние
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        <small class="text-body-secondary">
+                            Страница {{ message_page.number }}
+                            из {{ message_page.paginator.num_pages }}
+                        </small>
+
+                        <div>
+                            {% if message_page.has_previous %}
+                                <a
+                                    class="btn btn-sm btn-outline-secondary"
+                                    href="?page={{ message_page.previous_page_number }}"
+                                >
+                                    Более новые
+                                </a>
+                            {% endif %}
+                        </div>
+                    </nav>
+                {% endif %}
+
+
+                <div class="d-flex flex-column gap-3">
+                    {% for chat_message in chat_messages %}
+                        <div
+                            class="d-flex
+                                   {% if chat_message.sender == user %}
+                                       justify-content-end
+                                   {% else %}
+                                       justify-content-start
+                                   {% endif %}"
+                        >
+                            <article
+                                class="rounded-3 px-3 py-2
+                                       {% if chat_message.sender == user %}
+                                           bg-primary text-white
+                                       {% else %}
+                                           bg-body-secondary
+                                       {% endif %}"
+                                style="max-width: 78%;"
+                            >
+                                <div class="d-flex justify-content-between
+                                            align-items-center gap-3 mb-1">
+                                    {% if chat_message.sender == user %}
+                                        <strong class="small">
+                                            Вы
+                                        </strong>
+                                    {% else %}
+                                        <a
+                                            href="{% url 'users:profile-detail' chat_message.sender.pk %}"
+                                            class="small fw-semibold
+                                                   text-decoration-none
+                                                   link-body-emphasis"
+                                        >
+                                            {{ chat_message.sender.display_name }}
+                                        </a>
+                                    {% endif %}
+
+                                    <time
+                                        class="small
+                                               {% if chat_message.sender == user %}
+                                                   text-white-50
+                                               {% else %}
+                                                   text-body-secondary
+                                               {% endif %}"
+                                    >
+                                        {{ chat_message.created_at|date:"d.m.Y H:i" }}
+                                    </time>
+                                </div>
+
+                                <div>
+                                    {{ chat_message.text|linebreaksbr }}
+                                </div>
+                            </article>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-5">
+                            <p class="text-body-secondary mb-0">
+                                Сообщений пока нет.
+                            </p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+
+        {# Форма отправки сообщения #}
+        {% if chat.is_active %}
+            <section class="card border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <label
+                            class="form-label visually-hidden"
+                            for="{{ form.text.id_for_label }}"
+                        >
+                            {{ form.text.label }}
+                        </label>
+
+                        <div class="input-group">
+                            {{ form.text }}
+
+                            <button
+                                class="btn btn-primary"
+                                type="submit"
+                            >
+                                Отправить
+                            </button>
+                        </div>
+
+                        {% for error in form.text.errors %}
+                            <div class="text-danger small mt-2">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
+                    </form>
+                </div>
+            </section>
+        {% else %}
+            <div class="alert alert-secondary mb-0">
+                Чат закрыт. Отправка новых сообщений недоступна.
+            </div>
+        {% endif %}
+
+    </div>
 </div>
-
-{% if chat.is_active %}
-    <form method="post" novalidate>
-        {% csrf_token %}
-
-        <div class="mb-3">
-            <label class="form-label" for="{{ form.text.id_for_label }}">{{ form.text.label }}</label>
-            {{ form.text }}
-
-            {% for error in form.text.errors %}
-                <div class="invalid-feedback d-block">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <button class="btn btn-primary" type="submit">Отправить</button>
-        <a class="btn btn-secondary" href="{% url 'chats:list' %}">К списку чатов</a>
-    </form>
-{% else %}
-    <div class="alert alert-secondary">Чат закрыт.</div>
-    <a class="btn btn-secondary" href="{% url 'chats:list' %}">К списку чатов</a>
-{% endif %}
 {% endblock %}
