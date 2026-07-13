@@ -8,9 +8,26 @@ from django.db import transaction
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.http import JsonResponse
+from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 from django.views.generic.edit import FormMixin
 from reviews.models import Review
+
+
+def serialize_message(chat_message, current_user):
+    return {
+        "id": chat_message.pk,
+        "text": chat_message.text,
+        "created_at": chat_message.created_at.strftime(
+            "%d.%m.%Y %H:%M"
+        ),
+        "is_own": chat_message.sender_id == current_user.id,
+        "sender": {
+            "id": chat_message.sender_id,
+            "display_name": chat_message.sender.display_name,
+        },
+    }
 
 
 class StartChatView(LoginRequiredMixin, FormView):
@@ -150,12 +167,84 @@ class ChatDetailView(LoginRequiredMixin, FormMixin, DetailView):
         return self.form_invalid(form)
 
     def form_valid(self, form):
-        Message.objects.create(
+        chat_message = Message.objects.create(
             chat=self.object,
             sender=self.request.user,
-            text=form.cleaned_data['text'],
+            text=form.cleaned_data["text"],
         )
-        return redirect('chats:detail', pk=self.object.pk)
+
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "message": serialize_message(
+                        chat_message,
+                        self.request.user,
+                    )
+                },
+                status=201,
+            )
+
+        return redirect("chats:detail", pk=self.object.pk)
+
+    def form_invalid(self, form):
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {
+                    "errors": form.errors.get_json_data(),
+                },
+                status=400,
+            )
+
+        return super().form_invalid(form)
 
     def get_success_url(self):
         return reverse('chats:detail', kwargs={'pk': self.object.pk})
+
+
+class ChatMessagesView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        chat = get_object_or_404(
+            Chat.objects.filter(
+                Q(buyer=request.user)
+                | Q(seller=request.user)
+            ),
+            pk=pk,
+        )
+
+        try:
+            after_id = int(request.GET.get("after", 0))
+        except ValueError:
+            after_id = 0
+
+        new_messages = list(
+            chat.messages
+            .filter(pk__gt=after_id)
+            .select_related("sender")
+            .order_by("created_at", "pk")[:100]
+        )
+
+        incoming_ids = [
+            chat_message.pk
+            for chat_message in new_messages
+            if (
+                chat_message.sender_id != request.user.id
+                and not chat_message.is_read
+            )
+        ]
+
+        if incoming_ids:
+            Message.objects.filter(
+                pk__in=incoming_ids,
+            ).update(is_read=True)
+
+        return JsonResponse(
+            {
+                "messages": [
+                    serialize_message(
+                        chat_message,
+                        request.user,
+                    )
+                    for chat_message in new_messages
+                ]
+            }
+        )
