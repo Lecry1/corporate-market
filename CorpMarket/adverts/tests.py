@@ -1,15 +1,14 @@
+from adverts.models import Advert
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from adverts.models import Advert
-
 User = get_user_model()
-
 
 # ==========================================
 # ТЕСТЫ МОДЕЛИ (из ветки feature/model-tests)
 # ==========================================
+
 
 class AdvertModelTest(TestCase):
 
@@ -28,10 +27,7 @@ class AdvertModelTest(TestCase):
 
         self.assertEqual(str(advert), 'Велосипед')
         self.assertEqual(advert.status, Advert.Status.ACTIVE)
-        self.assertEqual(
-            advert.get_absolute_url(), 
-            reverse('adverts:detail', kwargs={'pk': advert.pk})
-        )
+        self.assertEqual(advert.get_absolute_url(), reverse('adverts:detail', kwargs={'pk': advert.pk}))
         self.assertTrue(Advert.objects.filter(pk=advert.pk).exists())
 
 
@@ -39,16 +35,14 @@ class AdvertModelTest(TestCase):
 # ТЕСТЫ ВЬЮХ (из ветки dev)
 # ==========================================
 
+
 class AdvertViewsTest(TestCase):
 
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         self.advert = Advert.objects.create(
-            title='Тестовое объявление',
-            description='Тестовое описание',
-            price=1000,
-            category=Advert.Category.PRODUCT,
+            title='Тестовое объявление', description='Тестовое описание', price=1000, category=Advert.Category.PRODUCT,
             seller=self.user
         )
 
@@ -99,10 +93,17 @@ class AdvertCreateViewTest(TestCase):
             'description': 'Описание нового объявления',
             'price': 2000,
             'category': Advert.Category.SERVICE,
-            'address': 'Москва'
+            'address': 'Москва',
+            'status': Advert.Status.ACTIVE,
+            # 👇 ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ДЛЯ PHOTOFORMSET
+            'photos-TOTAL_FORMS': '0',
+            'photos-INITIAL_FORMS': '0',
+            'photos-MIN_NUM_FORMS': '0',
+            'photos-MAX_NUM_FORMS': '1000',
         }
         response = self.client.post(reverse('adverts:create'), data)
-        self.assertEqual(response.status_code, 302)  # Redirect после создания
+
+        self.assertEqual(response.status_code, 302)
         self.assertTrue(Advert.objects.filter(title='Новое объявление').exists())
 
 
@@ -113,10 +114,7 @@ class AdvertUpdateViewTest(TestCase):
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         self.other_user = User.objects.create_user(username='otheruser', password='otherpass123')
         self.advert = Advert.objects.create(
-            title='Тестовое объявление',
-            description='Тестовое описание',
-            price=1000,
-            category=Advert.Category.PRODUCT,
+            title='Тестовое объявление', description='Тестовое описание', price=1000, category=Advert.Category.PRODUCT,
             seller=self.user
         )
 
@@ -136,9 +134,16 @@ class AdvertUpdateViewTest(TestCase):
             'description': 'Обновлённое описание',
             'price': 3000,
             'category': Advert.Category.SERVICE,
-            'address': 'Санкт-Петербург'
+            'address': 'Санкт-Петербург',
+            'status': Advert.Status.ACTIVE,
+            # 👇 ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ДЛЯ PHOTOFORMSET
+            'photos-TOTAL_FORMS': '0',
+            'photos-INITIAL_FORMS': '0',
+            'photos-MIN_NUM_FORMS': '0',
+            'photos-MAX_NUM_FORMS': '1000',
         }
         response = self.client.post(reverse('adverts:update', args=[self.advert.pk]), data)
+
         self.assertEqual(response.status_code, 302)
         self.advert.refresh_from_db()
         self.assertEqual(self.advert.title, 'Обновлённое объявление')
@@ -152,10 +157,7 @@ class AdvertDeleteViewTest(TestCase):
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         self.other_user = User.objects.create_user(username='otheruser', password='otherpass123')
         self.advert = Advert.objects.create(
-            title='Тестовое объявление',
-            description='Тестовое описание',
-            price=1000,
-            category=Advert.Category.PRODUCT,
+            title='Тестовое объявление', description='Тестовое описание', price=1000, category=Advert.Category.PRODUCT,
             seller=self.user
         )
 
