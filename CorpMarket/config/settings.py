@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'users.apps.UsersConfig',
     'adverts.apps.AdvertsConfig',
-    'chats.apps.ChatsConfig',
     'reviews.apps.ReviewsConfig',
     'chats.apps.ChatsConfig',
 ]
