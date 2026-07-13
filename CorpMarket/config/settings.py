@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'users.apps.UsersConfig',
     'adverts.apps.AdvertsConfig',
-    'photos.apps.PhotosConfig',
     'chats.apps.ChatsConfig',
     'reviews.apps.ReviewsConfig',
 ]
@@ -112,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = 'ru'
 
 TIME_ZONE = "Europe/Moscow"
 
