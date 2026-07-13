@@ -1,10 +1,39 @@
+from adverts.models import Advert
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .models import Advert
-
 User = get_user_model()
+
+# ==========================================
+# ТЕСТЫ МОДЕЛИ (из ветки feature/model-tests)
+# ==========================================
+
+
+class AdvertModelTest(TestCase):
+
+    def setUp(self):
+        self.seller = User.objects.create_user(username='seller')
+
+    def test_advert_creation_and_string_representation(self):
+        advert = Advert.objects.create(
+            seller=self.seller,
+            title='Велосипед',
+            description='Городской велосипед в хорошем состоянии.',
+            price=25000,
+            category=Advert.Category.PRODUCT,
+            address='Москва',
+        )
+
+        self.assertEqual(str(advert), 'Велосипед')
+        self.assertEqual(advert.status, Advert.Status.ACTIVE)
+        self.assertEqual(advert.get_absolute_url(), reverse('adverts:detail', kwargs={'pk': advert.pk}))
+        self.assertTrue(Advert.objects.filter(pk=advert.pk).exists())
+
+
+# ==========================================
+# ТЕСТЫ ВЬЮХ (из ветки dev)
+# ==========================================
 
 
 class AdvertViewsTest(TestCase):
@@ -64,10 +93,17 @@ class AdvertCreateViewTest(TestCase):
             'description': 'Описание нового объявления',
             'price': 2000,
             'category': Advert.Category.SERVICE,
-            'address': 'Москва'
+            'address': 'Москва',
+            'status': Advert.Status.ACTIVE,
+            # 👇 ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ДЛЯ PHOTOFORMSET
+            'photos-TOTAL_FORMS': '0',
+            'photos-INITIAL_FORMS': '0',
+            'photos-MIN_NUM_FORMS': '0',
+            'photos-MAX_NUM_FORMS': '1000',
         }
         response = self.client.post(reverse('adverts:create'), data)
-        self.assertEqual(response.status_code, 302)  # Redirect после создания
+
+        self.assertEqual(response.status_code, 302)
         self.assertTrue(Advert.objects.filter(title='Новое объявление').exists())
 
 
@@ -98,9 +134,16 @@ class AdvertUpdateViewTest(TestCase):
             'description': 'Обновлённое описание',
             'price': 3000,
             'category': Advert.Category.SERVICE,
-            'address': 'Санкт-Петербург'
+            'address': 'Санкт-Петербург',
+            'status': Advert.Status.ACTIVE,
+            # 👇 ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ДЛЯ PHOTOFORMSET
+            'photos-TOTAL_FORMS': '0',
+            'photos-INITIAL_FORMS': '0',
+            'photos-MIN_NUM_FORMS': '0',
+            'photos-MAX_NUM_FORMS': '1000',
         }
         response = self.client.post(reverse('adverts:update', args=[self.advert.pk]), data)
+
         self.assertEqual(response.status_code, 302)
         self.advert.refresh_from_db()
         self.assertEqual(self.advert.title, 'Обновлённое объявление')

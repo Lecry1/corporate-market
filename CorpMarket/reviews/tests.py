@@ -2,10 +2,15 @@ from adverts.models import Advert
 from chats.models import Chat
 from django.test import TestCase
 from django.urls import reverse
+
 from reviews.forms import ReviewForm
 from reviews.models import Review
 from users.models import CustomUser
 
+
+# ==========================================
+# ТЕСТЫ МОДЕЛИ (Объединены из обеих веток)
+# ==========================================
 
 class ReviewModelTest(TestCase):
 
@@ -19,6 +24,7 @@ class ReviewModelTest(TestCase):
             category=Advert.Category.SERVICE,
             status=Advert.Status.COMPLETED,
         )
+        # Добавлено из dev: чат нужен для проверки рейтинга и flow-тестов
         self.chat = Chat.objects.create(advert=self.advert, buyer=self.buyer, seller=self.seller)
 
     def test_review_creation_and_string_representation(self):
@@ -37,6 +43,7 @@ class ReviewModelTest(TestCase):
         self.assertEqual(review.advert, self.advert)
         self.assertTrue(Review.objects.filter(pk=review.pk).exists())
 
+        # Добавлено из dev: проверка автоматического пересчета рейтинга
         self.seller.refresh_from_db()
         self.assertEqual(self.seller.seller_rating, 5.0)
 
@@ -45,19 +52,25 @@ class ReviewModelTest(TestCase):
         self.assertEqual(self.seller.seller_rating, 0.0)
 
 
+# ==========================================
+# ТЕСТЫ ФОРМ (из ветки dev)
+# ==========================================
+
 class ReviewFormTest(TestCase):
 
     def test_rating_from_one_to_five_is_valid(self):
         form = ReviewForm(data={'rating': 5, 'comment': ''})
-
         self.assertTrue(form.is_valid())
 
     def test_rating_outside_allowed_range_is_invalid(self):
         form = ReviewForm(data={'rating': 6, 'comment': 'Неверная оценка'})
-
         self.assertFalse(form.is_valid())
         self.assertIn('rating', form.errors)
 
+
+# ==========================================
+# ТЕСТЫ БИЗНЕС-ЛОГИКИ И ВЬЮХ (из ветки dev)
+# ==========================================
 
 class ReviewFlowTest(TestCase):
 
@@ -77,11 +90,12 @@ class ReviewFlowTest(TestCase):
     def test_guest_is_redirected_to_login(self):
         url = reverse('reviews:create', kwargs={'chat_pk': self.chat.pk})
         response = self.client.get(url)
-
         self.assertRedirects(response, f'{reverse("users:login")}?next={url}')
 
     def test_buyer_can_review_seller(self):
         self.client.force_login(self.buyer)
+        # Примечание: мы намеренно передаем "левые" from_user/to_user/flag, 
+        # чтобы проверить, что вьюха игнорирует их и ставит правильные (защита от подделки)
         response = self.client.post(
             reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}),
             {
@@ -127,7 +141,6 @@ class ReviewFlowTest(TestCase):
     def test_outsider_cannot_review_chat_participant(self):
         self.client.force_login(self.outsider)
         response = self.client.get(reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}))
-
         self.assertEqual(response.status_code, 404)
 
     def test_duplicate_review_is_not_created(self):
@@ -162,6 +175,7 @@ class ReviewFlowTest(TestCase):
 
         user_response = self.client.get(reverse('reviews:user-list', kwargs={'user_pk': self.seller.pk}))
         advert_response = self.client.get(reverse('reviews:advert-list', kwargs={'advert_pk': self.advert.pk}))
+        
         self.assertEqual(user_response.status_code, 200)
         self.assertEqual(advert_response.status_code, 200)
         self.assertContains(user_response, review.comment)
@@ -170,5 +184,4 @@ class ReviewFlowTest(TestCase):
     def test_completed_chat_shows_review_action(self):
         self.client.force_login(self.buyer)
         response = self.client.get(reverse('chats:detail', kwargs={'pk': self.chat.pk}))
-
         self.assertContains(response, reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}))
