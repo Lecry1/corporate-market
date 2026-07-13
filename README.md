@@ -74,6 +74,22 @@ pip install -r requirements-dev.txt
 
 ---
 
+## Установка Git hooks
+
+Для автоматической проверки кода перед коммитом:
+
+```bash
+pre-commit install
+```
+
+Проверить работу вручную:
+
+```bash
+pre-commit run --all-files
+```
+
+---
+
 ## Настройка переменных окружения
 
 Создать файл `.env` в корне проекта на основе `.env.example`.
@@ -137,24 +153,6 @@ docker compose down -v
 ```
 http://127.0.0.1:8000/
 ```
-
----
-
-## Установка Git hooks
-
-Для автоматической проверки кода перед коммитом:
-
-```bash
-pre-commit install
-```
-
-Проверить работу вручную:
-
-```bash
-pre-commit run --all-files
-```
-
----
 
 # Модели
 
@@ -239,7 +237,7 @@ pre-commit run --all-files
 
 ![image 3](./docs/images/image_3.png)
 
-- **Просмотр детальный объявления**
+- **Детальный просмотр объявления**
 ![image 5](./docs/images/image_5.png)
 
 - **Список объявлений** 
