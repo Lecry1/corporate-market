@@ -1,15 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-
 from users.models import Admin, CustomUser
 
 User = get_user_model()
 
-
 # ==========================================
 # ТЕСТЫ МОДЕЛЕЙ (из ветки dev)
 # ==========================================
+
 
 class CustomUserModelTest(TestCase):
 
@@ -45,6 +44,7 @@ class AdminModelTest(TestCase):
 # ==========================================
 # ТЕСТЫ ВЬЮХ И АУТЕНТИФИКАЦИИ (из ветки tests)
 # ==========================================
+
 
 # Базовый класс с общими методами для тестов
 class BaseUserTest(TestCase):
@@ -131,7 +131,7 @@ class LoginTest(BaseUserTest):
             'password': 'WrongPassword!',
         })
         self.assertFalse(response.wsgi_request.user.is_authenticated)
-        self.assertContains(response, 'Please enter a correct username and password.')
+        self.assertContains(response, 'Пожалуйста, введите правильные имя пользователя и пароль')
 
 
 # Тесты выхода из аккаунта
