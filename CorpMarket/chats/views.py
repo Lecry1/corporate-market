@@ -82,7 +82,11 @@ class ChatListView(LoginRequiredMixin, ListView):
                                     last_message_text=Subquery(latest_messages.values('text')[:1]),
                                     last_message_at=Subquery(latest_messages.values('created_at')[:1]),
                                     unread_message_count=Count('messages', filter=unread_filter),
-                                ).order_by('-updated_at')
+                                ).order_by('-updated_at').select_related(
+                                    "advert",
+                                    "buyer",
+                                    "seller",
+                                ).prefetch_related("advert__photos")
         )
 
 
@@ -93,10 +97,18 @@ class ChatDetailView(LoginRequiredMixin, FormMixin, DetailView):
     context_object_name = 'chat'
 
     def get_queryset(self):
-        return Chat.objects.filter(Q(buyer=self.request.user) | Q(seller=self.request.user)).select_related(
-            'advert',
-            'buyer',
-            'seller',
+        return (
+            Chat.objects
+            .filter(
+                Q(buyer=self.request.user)
+                | Q(seller=self.request.user)
+            )
+            .select_related(
+                "advert",
+                "buyer",
+                "seller",
+            )
+            .prefetch_related("advert__photos")
         )
 
     def get_context_data(self, **kwargs):
