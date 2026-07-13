@@ -153,6 +153,12 @@ docker compose down -v
 ```
 http://127.0.0.1:8000/
 ```
+# Покрытие
+```bash
+docker compose exec web pip install coverage
+docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && coverage html"
+```
+Открываем появившейся html по пути `CorpMarket/htmlcov/index.html`
 
 # Модели
 
