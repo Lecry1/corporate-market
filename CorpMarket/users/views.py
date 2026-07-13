@@ -31,17 +31,26 @@ class UserProfileView(DetailView):
     context_object_name = "profile_user"
 
     def get_queryset(self):
-        active_adverts = Advert.objects.filter(
-            status=Advert.Status.ACTIVE,
-        ).order_by("-created_at")
+        active_adverts = (
+            Advert.objects
+            .filter(status=Advert.Status.ACTIVE)
+            .prefetch_related("photos")
+            .order_by("-created_at")
+        )
 
-        completed_adverts = Advert.objects.filter(
-            status=Advert.Status.COMPLETED,
-        ).order_by("-created_at")
+        completed_adverts = (
+            Advert.objects
+            .filter(status=Advert.Status.COMPLETED)
+            .prefetch_related("photos")
+            .order_by("-created_at")
+        )
 
-        archived_adverts = Advert.objects.filter(
-            status=Advert.Status.ARCHIVED,
-        ).order_by("-created_at")
+        archived_adverts = (
+            Advert.objects
+            .filter(status=Advert.Status.ARCHIVED)
+            .prefetch_related("photos")
+            .order_by("-created_at")
+        )
 
         received_reviews = (
             Review.objects

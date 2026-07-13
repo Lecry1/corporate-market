@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Отзывы по объявлению — КорпМаркет{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Отзывы по объявлению</h1>
+
+<p>
+    <a href="{{ advert.get_absolute_url }}">{{ advert.title }}</a>
+</p>
+
+{% include "reviews/review_list_items.html" %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Отзывы о {{ review_user.display_name }} — КорпМаркет{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Отзывы о {{ review_user.display_name }}</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card card-body">
+            <strong>Рейтинг продавца</strong>
+            <span class="display-6">{{ review_user.seller_rating|floatformat:1 }}</span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-body">
+            <strong>Рейтинг покупателя</strong>
+            <span class="display-6">{{ review_user.buyer_rating|floatformat:1 }}</span>
+        </div>
+    </div>
+</div>
+
+{% include "reviews/review_list_items.html" %}
+{% endblock %}
