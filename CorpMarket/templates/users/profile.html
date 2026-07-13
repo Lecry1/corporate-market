@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ profile_user.username }} — КорпМаркет
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    {# Левая колонка: данные пользователя #}
+    <aside class="col-12 col-lg-4 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+
+                {% if profile_user.photo %}
+                    <img
+                        src="{{ profile_user.photo.url }}"
+                        alt="Аватар {{ profile_user.username }}"
+                        class="rounded-circle object-fit-cover mb-3"
+                        width="140"
+                        height="140"
+                    >
+                {% else %}
+                    <div
+                        class="rounded-circle bg-body-secondary
+                               d-inline-flex align-items-center
+                               justify-content-center mb-3"
+                        style="width: 140px; height: 140px;"
+                    >
+                        <span class="display-4 text-body-secondary">
+                            {{ profile_user.username|first|upper }}
+                        </span>
+                    </div>
+                {% endif %}
+
+                <h1 class="h4 mb-1">
+                    {{ profile_user.username }}
+                </h1>
+
+                {% if profile_user.email %}
+                    <p class="text-body-secondary small mb-3">
+                        {{ profile_user.email }}
+                    </p>
+                {% endif %}
+
+                {% if profile_user.address %}
+                    <p class="small mb-3">
+                        <strong>Адрес:</strong>
+                        {{ profile_user.address }}
+                    </p>
+                {% endif %}
+
+                {% if user == profile_user %}
+                    <a
+                        href="{% url 'users:profile-edit' %}"
+                        class="btn btn-outline-primary w-100"
+                    >
+                        Редактировать профиль
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Рейтинг</h2>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-body-secondary">
+                        Как продавец
+                    </span>
+
+                    <strong>
+                        {{ profile_user.seller_rating|floatformat:1 }}
+                        / 5
+                    </strong>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <span class="text-body-secondary">
+                        Как покупатель
+                    </span>
+
+                    <strong>
+                        {{ profile_user.buyer_rating|floatformat:1 }}
+                        / 5
+                    </strong>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+
+    {# Правая колонка: объявления и отзывы #}
+    <div class="col-12 col-lg-8 col-xl-9">
+
+        <section class="mb-4">
+            <div class="d-flex justify-content-between
+                        align-items-center mb-3">
+                <h2 class="h4 mb-0">
+                    Активные объявления
+                </h2>
+
+                <span class="badge text-bg-success">
+                    {{ profile_user.active_adverts|length }}
+                </span>
+            </div>
+
+            {% include "users/includes/profile_advert_list.html" with adverts=profile_user.active_adverts %}
+        </section>
+
+
+        {% if profile_user.completed_adverts %}
+            <section class="mb-4">
+                <div class="d-flex justify-content-between
+                            align-items-center mb-3">
+                    <h2 class="h4 mb-0">
+                        Выполненные / проданные
+                    </h2>
+
+                    <span class="badge text-bg-primary">
+                        {{ profile_user.completed_adverts|length }}
+                    </span>
+                </div>
+
+                {% include "users/includes/profile_advert_list.html" with adverts=profile_user.completed_adverts %}
+            </section>
+        {% endif %}
+
+
+        <section class="mb-4">
+            <div class="d-flex justify-content-between
+                        align-items-center mb-3">
+                <h2 class="h4 mb-0">
+                    Архивные объявления
+                </h2>
+
+                <span class="badge text-bg-secondary">
+                    {{ profile_user.archived_adverts|length }}
+                </span>
+            </div>
+
+            {% include "users/includes/profile_advert_list.html" with adverts=profile_user.archived_adverts %}
+        </section>
+
+
+        <section>
+            <div class="d-flex justify-content-between
+                        align-items-center mb-3">
+                <h2 class="h4 mb-0">
+                    Отзывы
+                </h2>
+
+                <span class="badge text-bg-light border">
+                    {{ profile_user.received_reviews|length }}
+                </span>
+            </div>
+
+            {% if profile_user.received_reviews %}
+                <div class="d-flex flex-column gap-3">
+                    {% for review in profile_user.received_reviews %}
+                        <article class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between
+                                            align-items-start gap-3 mb-2">
+                                    <div>
+                                        <a
+                                            href="{% url 'users:profile-detail' review.from_user.pk %}"
+                                            class="fw-semibold
+                                                   text-decoration-none"
+                                        >
+                                            {{ review.from_user.username }}
+                                        </a>
+
+                                        <span class="text-body-secondary small">
+                                            · {{ review.get_flag_display }}
+                                        </span>
+                                    </div>
+
+                                    <span class="badge text-bg-warning">
+                                        ★ {{ review.rating }} / 5
+                                    </span>
+                                </div>
+
+                                {% if review.comment %}
+                                    <p class="mb-2">
+                                        {{ review.comment|linebreaksbr }}
+                                    </p>
+                                {% else %}
+                                    <p class="text-body-secondary mb-2">
+                                        Без комментария
+                                    </p>
+                                {% endif %}
+
+                                <div class="d-flex justify-content-between
+                                            gap-3 small text-body-secondary">
+                                    <a
+                                        href="{{ review.advert.get_absolute_url }}"
+                                        class="text-body-secondary"
+                                    >
+                                        {{ review.advert.title }}
+                                    </a>
+
+                                    <time>
+                                        {{ review.created_at|date:"d.m.Y" }}
+                                    </time>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <p class="text-body-secondary mb-0">
+                            У пользователя пока нет отзывов.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}
