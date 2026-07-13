@@ -98,3 +98,46 @@ class LoginTest(BaseUserTest):
         })
         self.assertFalse(response.wsgi_request.user.is_authenticated)
         self.assertContains(response, 'Please enter a correct username and password.')
+
+
+# Тесты выхода из аккаунта
+class LogoutTest(BaseUserTest):
+
+    def setUp(self):
+        super().setUp()
+        self.test_user = self.create_test_user(username='logouttest', password='LogoutPass123!')
+        self.client.login(username='logouttest', password='LogoutPass123!')
+
+    # После выхода (POST) редирект на список объявлений
+    def test_logout_redirect_with_post(self):
+        response = self.client.post(self.logout_url)
+        self.assertRedirects(response, self.adverts_list_url)
+
+    # После выхода пользователь разлогинивается
+    def test_user_logged_out_after_logout(self):
+        self.client.post(self.logout_url)
+        response = self.client.get(self.login_url)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    # GET запрос на выход должен возвращать 405 (Method Not Allowed)
+    def test_logout_get_returns_405(self):
+        response = self.client.get(self.logout_url)
+        self.assertEqual(response.status_code, 405)
+
+
+# Тест автоматического входа после регистрации
+class RegistrationAutoLoginTest(BaseUserTest):
+
+    # Проверка, что после регистрации пользователь автоматически авторизуется
+    def test_user_auto_login_after_registration(self):
+        response = self.client.post(
+            self.register_url, {
+                'username': 'autologin',
+                'email': 'auto@example.com',
+                'password1': 'AutoPass123!',
+                'password2': 'AutoPass123!',
+            }
+        )
+        user = User.objects.first()
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertEqual(response.wsgi_request.user, user)
