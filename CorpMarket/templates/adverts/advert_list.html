@@ -1,84 +1,279 @@
 {% extends "base.html" %}
 
-{% block title %}Объявления — КорпМаркет{% endblock %}
+{% block title %}
+    Объявления — КорпМаркет
+{% endblock %}
 
 {% block content %}
+
 <h1 class="mb-4">Объявления</h1>
 
-{% if adverts %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for advert in adverts %}
-            <div class="col">
-                <article class="card h-100">
-                    <div class="card-body">
-                        <h2 class="card-title h5">
-                            <a href="{{ advert.get_absolute_url }}">
-                                {{ advert.title }}
-                            </a>
-                        </h2>
+<form method="get" class="card card-body mb-4">
+    <div class="row g-3">
 
-                        <p class="card-text">
-                            {{ advert.description|truncatechars:120 }}
-                        </p>
+        <div class="col-md-6">
+            <label class="form-label" for="search">
+                Поиск
+            </label>
 
-                        <p>
-                            <strong>Категория:</strong>
-                            {{ advert.get_category_display }}
-                        </p>
+            <input
+                id="search"
+                class="form-control"
+                type="search"
+                name="q"
+                placeholder="Название или описание"
+                value="{{ request.GET.q }}"
+            >
+        </div>
 
-                        <p>
-                            <strong>Цена:</strong>
+        <div class="col-md-3">
+            <label class="form-label" for="category">
+                Категория
+            </label>
 
-                            {% if advert.is_price_negotiable %}
-                                Договорная
-                            {% else %}
-                                {{ advert.price }} ₽
-                            {% endif %}
-                        </p>
+            <select
+                id="category"
+                class="form-select"
+                name="category"
+            >
+                <option value="">
+                    Все категории
+                </option>
 
-                        <p class="text-muted mb-0">
-                            {{ advert.created_at|date:"d.m.Y H:i" }}
-                        </p>
-                    </div>
-                </article>
-            </div>
-        {% endfor %}
+                {% for value, label in categories %}
+                    <option
+                        value="{{ value }}"
+                        {% if request.GET.category == value %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label" for="ordering">
+                Сортировка
+            </label>
+
+            <select
+                id="ordering"
+                class="form-select"
+                name="ordering"
+            >
+                <option
+                    value="-created_at"
+                    {% if request.GET.ordering == "-created_at" or not request.GET.ordering %}
+                        selected
+                    {% endif %}
+                >
+                    Сначала новые
+                </option>
+
+                <option
+                    value="created_at"
+                    {% if request.GET.ordering == "created_at" %}
+                        selected
+                    {% endif %}
+                >
+                    Сначала старые
+                </option>
+
+                <option
+                    value="price"
+                    {% if request.GET.ordering == "price" %}
+                        selected
+                    {% endif %}
+                >
+                    Сначала дешёвые
+                </option>
+
+                <option
+                    value="-price"
+                    {% if request.GET.ordering == "-price" %}
+                        selected
+                    {% endif %}
+                >
+                    Сначала дорогие
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label" for="min-price">
+                Цена от
+            </label>
+
+            <input
+                id="min-price"
+                class="form-control"
+                type="number"
+                min="0"
+                name="min_price"
+                value="{{ request.GET.min_price }}"
+            >
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label" for="max-price">
+                Цена до
+            </label>
+
+            <input
+                id="max-price"
+                class="form-control"
+                type="number"
+                min="0"
+                name="max_price"
+                value="{{ request.GET.max_price }}"
+            >
+        </div>
+
+        <div class="col-md-6 d-flex align-items-end gap-2">
+            <button class="btn btn-primary" type="submit">
+                Применить
+            </button>
+
+            <a
+                class="btn btn-outline-secondary"
+                href="{% url 'adverts:list' %}"
+            >
+                Сбросить
+            </a>
+        </div>
+
     </div>
+</form>
+
+{% if adverts %}
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+
+    {% for advert in adverts %}
+
+    <div class="col">
+
+        <div class="card h-100">
+
+            {% if advert.main_photo %}
+                <img
+                    src="{{ advert.main_photo.image.url }}"
+                    class="card-img-top"
+                    alt="{{ advert.title }}"
+                    style="object-fit: cover; aspect-ratio: 16 / 10;"
+                >
+            {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 16 / 10;">
+                    Фото отсутствует
+                </div>
+            {% endif %}
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    <a href="{{ advert.get_absolute_url }}">
+                        {{ advert.title }}
+                    </a>
+                </h5>
+
+                <p class="card-text">
+                    {{ advert.description|truncatechars:120 }}
+                </p>
+
+                <p>
+                    <strong>Категория:</strong>
+                    {{ advert.get_category_display }}
+                </p>
+
+                <p>
+                    <strong>Цена:</strong>
+
+                    {% if advert.is_price_negotiable %}
+                        Договорная
+                    {% else %}
+                        {{ advert.price }} ₽
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Статус:</strong>
+                    {{ advert.get_status_display }}
+                </p>
+
+                <small class="text-muted">
+                    {{ advert.created_at|date:"d.m.Y H:i" }}
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
 {% else %}
-    <p>Объявлений пока нет.</p>
+
+<div class="alert alert-info">
+    По заданным параметрам ничего не найдено.
+</div>
+
 {% endif %}
 
 {% if is_paginated %}
-    <nav class="mt-4" aria-label="Навигация по страницам">
-        <ul class="pagination">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ page_obj.previous_page_number }}"
-                    >
-                        Назад
-                    </a>
-                </li>
-            {% endif %}
 
-            <li class="page-item active">
-                <span class="page-link">
-                    {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
-                </span>
+<nav class="mt-4">
+
+    <ul class="pagination">
+
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+
+                <a
+                    class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+                >
+                    Назад
+                </a>
+
             </li>
+        {% endif %}
 
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a
-                        class="page-link"
-                        href="?page={{ page_obj.next_page_number }}"
-                    >
-                        Вперёд
-                    </a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
+        <li class="page-item active">
+
+            <span class="page-link">
+
+                {{ page_obj.number }}
+
+                /
+
+                {{ page_obj.paginator.num_pages }}
+
+            </span>
+
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+
+                <a
+                    class="page-link"
+                    href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+                >
+                    Вперёд
+                </a>
+
+            </li>
+        {% endif %}
+
+    </ul>
+
+</nav>
+
 {% endif %}
+
 {% endblock %}
