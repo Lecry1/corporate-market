@@ -6,6 +6,16 @@
 
 ---
 
+## Проект выполняли:
+
+- **Глебов Владислав Сергеевич**
+- Лямин Егор Алексеевич
+- Соколов Сергей Константинович
+- Дашкин Рушан Ряшидович
+- Гущин Александр Сергеевич
+
+---
+
 ## Стек технологий
 
 - Python 3.12
@@ -64,22 +74,6 @@ pip install -r requirements-dev.txt
 
 ---
 
-## Установка Git hooks
-
-Для автоматической проверки кода перед коммитом:
-
-```bash
-pre-commit install
-```
-
-Проверить работу вручную:
-
-```bash
-pre-commit run --all-files
-```
-
----
-
 ## Настройка переменных окружения
 
 Создать файл `.env` в корне проекта на основе `.env.example`.
@@ -104,6 +98,8 @@ DB_PORT=5432
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
+
+--- 
 
 # 🐳 Запуск через Docker
 
@@ -142,38 +138,113 @@ docker compose down -v
 http://127.0.0.1:8000/
 ```
 
-# Небольшой flow user
+---
 
-Главная страница(пока пуста, так как нет объявлений)
-![image 1](./docs/images/image_1.png)
+## Установка Git hooks
 
+Для автоматической проверки кода перед коммитом:
+
+```bash
+pre-commit install
+```
+
+Проверить работу вручную:
+
+```bash
+pre-commit run --all-files
+```
+
+---
+
+# Модели
+
+- **Users**  
+  Хранит данные сотрудников компании. Используется как основная пользовательская сущность.  
+  Поля:  
+  - `photo` — фото профиля  
+  - `address` — адрес  
+  - `buyer_rating` — рейтинг как покупателя  
+  - `seller_rating` — рейтинг как продавца  
+
+- **Credentials**  
+  Хранит данные для входа пользователя в систему.  
+  Поля:  
+  - `user` — OneToOne → `Users`  
+  - `login` — уникальный логин  
+  - `password_hash` — хеш пароля  
+
+- **Admin**  
+  Хранит информацию о пользователях с правами администратора.  
+  Поля:  
+  - `user` — OneToOne → `Users`  
+
+- **Adverts**  
+  Основная сущность; хранит объявления пользователей о товарах, услугах или поездках.  
+  Поля:  
+  - `seller` — ForeignKey → `Users`  
+  - `status` — статус (активно, выполнено, архивировано)  
+  - `category` — категория (товар, услуга, мероприятие)  
+  - `created_at` — дата создания  
+  - `title` — заголовок  
+  - `price` — цена  
+  - `description` — описание  
+  - `address` — адрес
+
+- **Photos**  
+  Хранит фотографии, прикреплённые к объявлению.  
+  Поля:  
+  - `advert` — ForeignKey → `Adverts`  
+  - `photo` — изображение  
+
+- **Chats**  
+  Хранит диалоги между автором объявления и заинтересованным пользователем.  
+  Поля:  
+  - `advert` — ForeignKey → `Adverts`  
+  - `seller` — ForeignKey → `Users`  
+  - `buyer` — ForeignKey → `Users`  
+
+- **Messages**  
+  Хранит сообщения внутри чата.  
+  Поля:  
+  - `chat` — ForeignKey → `Chats`  
+  - `user` — ForeignKey → `Users` (отправитель)  
+  - `created_at` — дата отправки  
+  - `message` — текст сообщения  
+
+- **Reviews**  
+  Хранит отзывы по завершённым сделкам.  
+  Поля:  
+  - `from_user` — ForeignKey → `Users` (автор отзыва)  
+  - `to_user` — ForeignKey → `Users` (получатель отзыва)  
+  - `advert` — ForeignKey → `Adverts`  
+  - `flag` — кому оставлен отзыв (покупателю или продавцу)  
+  - `rating` — оценка (1–5)  
+  - `comment` — текст отзыва
+
+## Связи
+- **Users → Adverts / Reviews / Chats / Messages**: один ко многим.
+- **Adverts → Photos / Reviews / Chats**: один ко многим.
+- **Chats → Messages**: один ко многим.
+- **Users → Credentials / Admin**: один к одному.
+
+## ER-диаграмма базы данных
+![image 20](./docs/images/image_20.png)
+
+---
+
+# Скриншоты
+
+- **Авторизация и Регистрация**
 ![image 2](./docs/images/image_2.png)
 
 ![image 3](./docs/images/image_3.png)
 
-Создание объявления
-![image 4](./docs/images/image_4.png)
-Просмотр детальный объявления
+- **Просмотр детальный объявления**
 ![image 5](./docs/images/image_5.png)
 
-![image 6](./docs/images/image_6.png)
-
-![image 7](./docs/images/image_7.png)
-
-![image 9](./docs/images/image_9.png)
-Редактирование профиля
-![image 10](./docs/images/image_10.png)
-
-![image 13](./docs/images/image_13.png)
-старые объявления + добавленные 
+- **Список объявлений** 
 ![image 15](./docs/images/image_15.png)
-фильтр по мероприяютию
-![image 16](./docs/images/image_16.png)
-Фильтр по цене
-![image 17](./docs/images/image_17.png)
 
-Просмотр профиля
+- **Просмотр профиля**
 ![image 18](./docs/images/image_18.png)
 
-Редактирование Объявления
-![image 19](./docs/images/image_19.png)
