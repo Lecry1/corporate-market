@@ -153,7 +153,22 @@ docker compose down -v
 ```
 http://127.0.0.1:8000/
 ```
-# Покрытие
+## Фикстуры
+При запущенном контейнере можно сделать dump всех данных БД
+```bash
+./fixture_backup.sh
+```
+А также можно восстановить в репе уже есть тестовые данные
+```bash
+./fixture_restore.sh
+```
+креды акков:
+admin admin@admin.com admin
+qwerty qwerty@qwerty.com 123qweasdzxc!
+mikle mikle@milke.com 123qweasdzxc!
+
+
+## Покрытие
 ```bash
 docker compose exec web pip install coverage
 docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && coverage html"
@@ -252,3 +267,8 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 - **Просмотр профиля**
 ![image 18](./docs/images/image_18.png)
 
+- **Чаты**
+![image 21](./docs/images/image_21.png)
+
+- **Отзывы** 
+![image 22](./docs/images/image_22.png)
