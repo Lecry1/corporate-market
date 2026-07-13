@@ -1,6 +1,5 @@
+from adverts.models import Advert, Photo
 from django.contrib import admin
-
-from .models import Advert, Photo
 
 
 class PhotoInline(admin.TabularInline):
@@ -11,9 +10,11 @@ class PhotoInline(admin.TabularInline):
 
 @admin.register(Advert)
 class AdvertAdmin(admin.ModelAdmin):
-    list_display = ("title", "seller", "category", "status", "created_at")
+    list_display = ("title", "seller", "category", "status", "price", "created_at")
     list_filter = ("category", "status", "created_at")
-    search_fields = ("title", "description", "seller__username")
+    search_fields = ("title", "description", "address", "seller__username")
+    list_select_related = ("seller",)
+    date_hierarchy = "created_at"
     inlines = [PhotoInline]
 
 
