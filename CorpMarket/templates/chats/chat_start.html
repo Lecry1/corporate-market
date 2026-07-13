@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Сообщение продавцу — КорпМаркет{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="mb-3">Написать продавцу</h1>
+
+        <p>
+            Объявление:
+            <a href="{{ advert.get_absolute_url }}">{{ advert.title }}</a>
+        </p>
+
+        <p>
+            Продавец: <strong>{{ advert.seller.display_name }}</strong>
+        </p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% for error in form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endfor %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.text.id_for_label }}">
+                    {{ form.text.label }}
+                </label>
+                {{ form.text }}
+
+                {% for error in form.text.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <button class="btn btn-primary" type="submit">Отправить</button>
+            <a class="btn btn-secondary" href="{{ advert.get_absolute_url }}">Отмена</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

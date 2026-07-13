@@ -2,8 +2,49 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from users.models import Admin, CustomUser
+
 User = get_user_model()
 
+
+# ==========================================
+# ТЕСТЫ МОДЕЛЕЙ (из ветки dev)
+# ==========================================
+
+class CustomUserModelTest(TestCase):
+
+    def test_user_creation_and_string_representation(self):
+        password = 'safe-password-2026'
+        user = CustomUser.objects.create_user(
+            username='alex',
+            password=password,
+            first_name='Александр',
+            last_name='Гущин',
+        )
+
+        self.assertEqual(str(user), 'alex')
+        self.assertEqual(user.display_name, 'Александр Гущин')
+        self.assertEqual(user.buyer_rating, 0.0)
+        self.assertEqual(user.seller_rating, 0.0)
+        self.assertTrue(user.check_password(password))
+
+
+class AdminModelTest(TestCase):
+
+    def test_admin_creation_and_string_representation(self):
+        user = CustomUser.objects.create_user(username='administrator')
+        administrator = Admin.objects.create(user=user)
+
+        self.assertEqual(administrator.pk, user.pk)
+        self.assertEqual(administrator.user, user)
+        self.assertEqual(user.admin_profile, administrator)
+        self.assertTrue(user.is_market_admin)
+        self.assertEqual(str(administrator), 'Администратор administrator')
+
+
+# ==========================================
+# ТЕСТЫ ВЬЮХ И АУТЕНТИФИКАЦИИ (из ветки tests)
+# ==========================================
 
 # Базовый класс с общими методами для тестов
 class BaseUserTest(TestCase):
@@ -21,19 +62,16 @@ class BaseUserTest(TestCase):
 # Тесты доступности страниц аутентификации
 class AuthPageTest(BaseUserTest):
 
-    # Страница регистрации должна быть доступна
     def test_register_page_accessible(self):
         response = self.client.get(self.register_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'users/register.html')
 
-    # Страница входа должна быть доступна
     def test_login_page_accessible(self):
         response = self.client.get(self.login_url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'users/login.html')
 
-    # Выход должен требовать POST запрос
     def test_logout_requires_post(self):
         response = self.client.get(self.logout_url)
         self.assertEqual(response.status_code, 405)
@@ -42,7 +80,6 @@ class AuthPageTest(BaseUserTest):
 # Тесты успешной регистрации
 class RegistrationSuccessTest(BaseUserTest):
 
-    # Проверка создания нового пользователя
     def test_register_new_user(self):
         response = self.client.post(
             self.register_url, {
@@ -58,7 +95,6 @@ class RegistrationSuccessTest(BaseUserTest):
         self.assertEqual(user.email, 'new@example.com')
         self.assertRedirects(response, self.adverts_list_url)
 
-    # После регистрации пользователь автоматически входит
     def test_user_is_authenticated_after_register(self):
         response = self.client.post(
             self.register_url, {
@@ -80,7 +116,6 @@ class LoginTest(BaseUserTest):
         super().setUp()
         self.test_user = self.create_test_user(username='logintest', password='LoginPass123!')
 
-    # Проверка успешного входа
     def test_login_success(self):
         response = self.client.post(self.login_url, {
             'username': 'logintest',
@@ -90,7 +125,6 @@ class LoginTest(BaseUserTest):
         self.assertTrue(response.wsgi_request.user.is_authenticated)
         self.assertEqual(response.wsgi_request.user.username, 'logintest')
 
-    # Нельзя войти с неверным паролем
     def test_login_wrong_password(self):
         response = self.client.post(self.login_url, {
             'username': 'logintest',
@@ -108,18 +142,15 @@ class LogoutTest(BaseUserTest):
         self.test_user = self.create_test_user(username='logouttest', password='LogoutPass123!')
         self.client.login(username='logouttest', password='LogoutPass123!')
 
-    # После выхода (POST) редирект на список объявлений
     def test_logout_redirect_with_post(self):
         response = self.client.post(self.logout_url)
         self.assertRedirects(response, self.adverts_list_url)
 
-    # После выхода пользователь разлогинивается
     def test_user_logged_out_after_logout(self):
         self.client.post(self.logout_url)
         response = self.client.get(self.login_url)
         self.assertFalse(response.wsgi_request.user.is_authenticated)
 
-    # GET запрос на выход должен возвращать 405 (Method Not Allowed)
     def test_logout_get_returns_405(self):
         response = self.client.get(self.logout_url)
         self.assertEqual(response.status_code, 405)
@@ -128,7 +159,6 @@ class LogoutTest(BaseUserTest):
 # Тест автоматического входа после регистрации
 class RegistrationAutoLoginTest(BaseUserTest):
 
-    # Проверка, что после регистрации пользователь автоматически авторизуется
     def test_user_auto_login_after_registration(self):
         response = self.client.post(
             self.register_url, {

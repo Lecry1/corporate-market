@@ -20,19 +20,56 @@ class Migration(migrations.Migration):
             name='Review',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('flag', models.CharField(choices=[('to_buyer', 'Покупателю'), ('to_seller', 'Продавцу')], max_length=20, verbose_name='Кому адресован')),
-                ('rating', models.PositiveSmallIntegerField(validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(5)], verbose_name='Рейтинг')),
+                (
+                    'flag',
+                    models.CharField(
+                        choices=[('to_buyer', 'Покупателю'), ('to_seller', 'Продавцу')], max_length=20,
+                        verbose_name='Кому адресован'
+                    )
+                ),
+                (
+                    'rating',
+                    models.PositiveSmallIntegerField(
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(5)
+                        ], verbose_name='Рейтинг'
+                    )
+                ),
                 ('comment', models.TextField(blank=True, verbose_name='Комментарий')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')),
-                ('advert', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='adverts.advert', verbose_name='Объявление')),
-                ('from_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews_left', to=settings.AUTH_USER_MODEL, verbose_name='От кого (автор отзыва)')),
-                ('to_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews_received', to=settings.AUTH_USER_MODEL, verbose_name='Кому (получатель отзыва)')),
+                (
+                    'advert',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='adverts.advert',
+                        verbose_name='Объявление'
+                    )
+                ),
+                (
+                    'from_user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='reviews_left',
+                        to=settings.AUTH_USER_MODEL, verbose_name='От кого (автор отзыва)'
+                    )
+                ),
+                (
+                    'to_user',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='reviews_received',
+                        to=settings.AUTH_USER_MODEL, verbose_name='Кому (получатель отзыва)'
+                    )
+                ),
             ],
             options={
-                'verbose_name': 'Отзыв',
-                'verbose_name_plural': 'Отзывы',
+                'verbose_name':
+                'Отзыв',
+                'verbose_name_plural':
+                'Отзывы',
                 'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['to_user', '-created_at'], name='reviews_rev_to_user_df5dff_idx'), models.Index(fields=['advert', '-created_at'], name='reviews_rev_advert__68e0e1_idx')],
+                'indexes': [
+                    models.Index(fields=['to_user', '-created_at'], name='reviews_rev_to_user_df5dff_idx'),
+                    models.Index(fields=['advert', '-created_at'], name='reviews_rev_advert__68e0e1_idx')
+                ],
                 'unique_together': {('from_user', 'advert')},
             },
         ),
