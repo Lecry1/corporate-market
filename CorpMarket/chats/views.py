@@ -148,7 +148,7 @@ class ChatDetailView(LoginRequiredMixin, FormMixin, DetailView):
         context['chat_messages'] = list(reversed(message_page.object_list))
         context['message_page'] = message_page
         context['other_user'] = other_user
-        context['can_leave_review'] = self.object.advert.status == Advert.Status.COMPLETED and not review_exists
+        context['can_leave_review'] = not review_exists  # and self.object.advert.status == Advert.Status.COMPLETED
         context['review_exists'] = review_exists
         return context
 
