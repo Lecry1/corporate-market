@@ -126,8 +126,9 @@
 
             {# Верхняя фиксированная часть #}
             <div class="chat-top">
-                <div class="d-flex justify-content-between
-                            align-items-center gap-3 mb-1">
+
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-1">
+
                     <div class="text-truncate">
                         <span class="text-body-secondary small">
                             Чат с
@@ -142,15 +143,31 @@
                         </a>
                     </div>
 
-                    <a
-                        href="{% url 'chats:list' %}"
-                        class="btn btn-sm btn-outline-secondary text-nowrap"
-                    >
-                        Все чаты
-                    </a>
+                    <div class="d-flex align-items-center gap-2">
+
+                        {% if can_leave_review %}
+                            <a
+                                class="btn btn-sm btn-outline-success"
+                                href="{% url 'reviews:create' chat.pk %}"
+                            >
+                                Оставить отзыв
+                            </a>
+                        {% elif review_exists %}
+                            <span class="badge text-bg-light border">
+                                Отзыв оставлен
+                            </span>
+                        {% endif %}
+
+                        <a
+                            href="{% url 'chats:list' %}"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            Все чаты
+                        </a>
+
+                    </div>
                 </div>
 
-                {# Компактная карточка объявления #}
                 <a
                     href="{{ chat.advert.get_absolute_url }}"
                     class="card border-0 shadow-sm text-decoration-none
@@ -179,8 +196,10 @@
 
                         <div class="col min-width-0">
                             <div class="card-body py-1 px-2">
+
                                 <div class="d-flex justify-content-between
                                             align-items-start gap-2">
+
                                     <div class="fw-semibold text-truncate">
                                         {{ chat.advert.title }}
                                     </div>
@@ -207,28 +226,12 @@
                                         {{ chat.advert.price }} ₽
                                     {% endif %}
                                 </div>
+
                             </div>
                         </div>
                     </div>
                 </a>
 
-                {# Отзыв после завершения сделки #}
-                {% if can_leave_review %}
-                    <div class="d-flex justify-content-end mb-1">
-                        <a
-                            class="btn btn-sm btn-outline-success"
-                            href="{% url 'reviews:create' chat.pk %}"
-                        >
-                            Оставить отзыв о пользователе
-                        </a>
-                    </div>
-                {% elif review_exists %}
-                    <div class="text-end mb-1">
-                        <span class="badge text-bg-light border">
-                            Отзыв уже оставлен
-                        </span>
-                    </div>
-                {% endif %}
             </div>
 
             {# Окно сообщений с собственной прокруткой #}
