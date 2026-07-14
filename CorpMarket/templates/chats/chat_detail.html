@@ -214,24 +214,19 @@
 
                 {# Отзыв после завершения сделки #}
                 {% if can_leave_review %}
-                    <div class="alert alert-success py-1 px-2 mb-1
-                                d-flex justify-content-between
-                                align-items-center gap-3">
-                        <div class="small">
-                            Сделка завершена. Оцените пользователя
-                            <strong>{{ other_user.display_name }}</strong>.
-                        </div>
-
+                    <div class="d-flex justify-content-end mb-1">
                         <a
-                            class="btn btn-sm btn-success text-nowrap"
+                            class="btn btn-sm btn-outline-success"
                             href="{% url 'reviews:create' chat.pk %}"
                         >
-                            Оставить отзыв
+                            Оставить отзыв о пользователе
                         </a>
                     </div>
                 {% elif review_exists %}
-                    <div class="alert alert-light border py-1 px-2 mb-1 small">
-                        Отзыв по этой сделке уже оставлен.
+                    <div class="text-end mb-1">
+                        <span class="badge text-bg-light border">
+                            Отзыв уже оставлен
+                        </span>
                     </div>
                 {% endif %}
             </div>

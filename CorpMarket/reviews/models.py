@@ -61,8 +61,8 @@ class Review(models.Model):
         if self.from_user_id and self.to_user_id and self.from_user_id == self.to_user_id:
             errors['to_user'] = 'Нельзя оставить отзыв самому себе.'
 
-        if self.advert_id and self.advert.status != self.advert.Status.COMPLETED:
-            errors['advert'] = 'Отзыв можно оставить только после завершения сделки.'
+        # if self.advert_id and self.advert.status != self.advert.Status.COMPLETED:
+        #     errors['advert'] = 'Отзыв можно оставить только после завершения сделки.'
 
         if self.from_user_id and self.to_user_id and self.advert_id:
             from chats.models import Chat
