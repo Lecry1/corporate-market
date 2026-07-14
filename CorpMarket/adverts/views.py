@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import (
 )
 from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.forms import inlineformset_factory
+from django.http import Http404
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -15,18 +16,35 @@ from django.views.generic import (
 
 from .models import Advert, Photo
 
-
 AdvertPhotoFormSet = inlineformset_factory(
     Advert,
     Photo,
-    fields=("image",),
+    fields=("image", ),
     extra=1,
     max_num=5,
     validate_max=True,
     can_delete=True,
-    min_num=1,
-    validate_min=True,
+    min_num=0,
+    validate_min=False,
 )
+
+
+class NotFoundOnPermissionMixin:
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return super().handle_no_permission()
+
+        raise Http404
+
+
+class AdvertPhotoFormsetDataMixin:
+
+    def has_photo_formset_data(self):
+        prefix = self.formset_class.get_default_prefix()
+        return any(
+            key.startswith(f"{prefix}-") for key in list(self.request.POST.keys()) + list(self.request.FILES.keys())
+        )
 
 
 class AdvertPhotoFormSetMixin:
@@ -48,9 +66,7 @@ class AdvertPhotoFormSetMixin:
         return context
 
     def render_invalid(self, form, formset):
-        return self.render_to_response(
-            self.get_context_data(form=form, photo_formset=formset)
-        )
+        return self.render_to_response(self.get_context_data(form=form, photo_formset=formset))
 
     def form_valid(self, form):
         photo_formset = self.get_formset()
@@ -87,20 +103,13 @@ class AdvertListView(ListView):
         ).strip()
 
         if query:
-            queryset = queryset.filter(
-                Q(title__icontains=query)
-                | Q(description__icontains=query)
-            )
+            queryset = queryset.filter(Q(title__icontains=query) | Q(description__icontains=query))
 
-        valid_categories = {
-            value for value, _label in Advert.Category.choices
-        }
+        valid_categories = {value for value, _label in Advert.Category.choices}
         if category in valid_categories:
             queryset = queryset.filter(category=category)
 
-        valid_statuses = {
-            value for value, _label in Advert.Status.choices
-        }
+        valid_statuses = {value for value, _label in Advert.Status.choices}
         if status != "all":
             if status not in valid_statuses:
                 status = Advert.Status.ACTIVE
@@ -179,9 +188,9 @@ class AdvertListView(ListView):
             )
 
         if ordering == "created_at":
-            return (F("created_at").asc(),)
+            return (F("created_at").asc(), )
 
-        return (F("created_at").desc(),)
+        return (F("created_at").desc(), )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -210,6 +219,7 @@ class AdvertDetailView(DetailView):
 class AdvertCreateView(
     LoginRequiredMixin,
     AdvertPhotoFormSetMixin,
+    AdvertPhotoFormsetDataMixin,
     CreateView,
 ):
     model = Advert
@@ -225,18 +235,36 @@ class AdvertCreateView(
     def post(self, request, *args, **kwargs):
         self.object = None
         form = self.get_form()
-        photo_formset = self.get_formset()
 
-        if form.is_valid() and photo_formset.is_valid():
+        if form.is_valid():
+            if self.has_photo_formset_data():
+                photo_formset = self.get_formset()
+                if not photo_formset.is_valid():
+                    return self.render_invalid(form, photo_formset)
+
             form.instance.seller = self.request.user
+            self.photo_formset = photo_formset if self.has_photo_formset_data() else None
             return self.form_valid(form)
 
+        photo_formset = self.get_formset() if self.has_photo_formset_data() else None
         return self.render_invalid(form, photo_formset)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        photo_formset = getattr(self, "photo_formset", None)
+        if photo_formset is not None:
+            photo_formset.instance = self.object
+            photo_formset.save()
+
+        return response
 
 
 class AdvertUpdateView(
     LoginRequiredMixin,
+    NotFoundOnPermissionMixin,
     AdvertPhotoFormSetMixin,
+    AdvertPhotoFormsetDataMixin,
     UserPassesTestMixin,
     UpdateView,
 ):
@@ -254,20 +282,22 @@ class AdvertUpdateView(
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
-        photo_formset = self.get_formset()
 
-        if form.is_valid() and photo_formset.is_valid():
+        if form.is_valid():
+            if self.has_photo_formset_data():
+                photo_formset = self.get_formset()
+                if not photo_formset.is_valid():
+                    return self.render_invalid(form, photo_formset)
+
             return self.form_valid(form)
 
+        photo_formset = self.get_formset() if self.has_photo_formset_data() else None
         return self.render_invalid(form, photo_formset)
 
     def test_func(self):
         advert = self.get_object()
 
-        return (
-            advert.seller == self.request.user
-            or self.request.user.is_superuser
-        )
+        return (advert.seller == self.request.user or self.request.user.is_superuser)
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -276,6 +306,7 @@ class AdvertUpdateView(
 
 class AdvertDeleteView(
     LoginRequiredMixin,
+    NotFoundOnPermissionMixin,
     UserPassesTestMixin,
     DeleteView,
 ):
@@ -286,7 +317,4 @@ class AdvertDeleteView(
     def test_func(self):
         advert = self.get_object()
 
-        return (
-            advert.seller == self.request.user
-            or self.request.user.is_superuser
-        )
+        return (advert.seller == self.request.user or self.request.user.is_superuser)

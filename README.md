@@ -1,90 +1,104 @@
-# КорпМаркет
+# 🛒 КорпМаркет (CorpMarket)
 
-Летняя практика в ivi.
-
-Внутренняя площадка компании для размещения объявлений о продаже товаров, предоставлении услуг и поиске попутчиков между сотрудниками.
-
----
-
-## Стек технологий
-
-- Python 3.12
-- Django 6
-- PostgreSQL 18
-- Bootstrap
+> **Проект разработан в рамках летней практики в компании ivi.**  
+> Внутренняя площадка компании для размещения объявлений о продаже товаров, предоставлении услуг и поиске попутчиков между сотрудниками.
 
 ---
 
-## Требования
+## 🚀 Quick Start 
+1. **Настройка файла окружения**
+   
+   Создайте файл `.env` в корне проекта на основе `.env.example`:
 
-Перед запуском необходимо установить:
+   ```env
+   SECRET_KEY=your_secret_key
+   DEBUG=True
 
-- Python 3.12+
-- PostgreSQL 16+
+   DB_NAME=corporate_market
+   DB_USER=corpmarket_user
+   DB_PASSWORD=your_password
+   DB_HOST=localhost
+   DB_PORT=5432
+   ```
+
+2. **Соберите образ и поднимите контейнеры в фоновом режиме:**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Выполните миграции внутри контейнера:**
+
+   ```bash
+   docker-compose exec web python CorpMarket/manage.py migrate
+   ```
+
+
+3. **Загрузите готовые тестовые данные (фикстуры):**
+   ```bash
+   ./fixture_restore.sh
+   ```
+   [См.Подробнее](#тестирование-и-работа-с-бд)
+
+
+   **Или создайте нового администратора вручную (если не использовали фикстуры):**
+   ```bash
+   docker-compose exec web python CorpMarket/manage.py createsuperuser
+   ```
+
+
+
+После запуска приложение будет доступно по адресу: **http://127.0.0.1:8000/**
+
+* Посмотреть общие логи: `docker compose logs -f`
+* Логи конкретных контейнеров: `docker compose logs -f web` или `docker compose logs -f db`
+* Остановить проект: `docker compose down -v`
 
 ---
 
-# Настройка окружения разработчика
+## 🛠 Стек технологий
 
-## Клонирование проекта
+* **Backend:** Python 3.12, Django 6
+* **Database:** PostgreSQL 16+ / 18
+* **Frontend:** Bootstrap
+
+---
+
+## 💻 Настройка окружения разработчика (Локально)
+
+Если вы хотите развернуть проект без Docker для разработки:
+
+### 1. Клонирование и виртуальное окружение
 
 ```bash
-git clone https://github.com/Lecry1/corporate-market.git
+git clone [https://github.com/Lecry1/corporate-market.git](https://github.com/Lecry1/corporate-market.git)
 cd corporate-market
-```
 
----
-
-## Создание виртуального окружения
-
-```bash
+# Создание виртуального окружения
 python -m venv .venv
-```
 
-### Linux/macOS
-
-```bash
+# Активация (Linux/macOS)
 source .venv/bin/activate
-```
-
-### Windows PowerShell
-
-```powershell
+# Активация (Windows PowerShell)
 .venv\Scripts\Activate.ps1
+
 ```
 
----
-
-## Установка зависимостей
+### 2. Установка зависимостей и Git hooks
 
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
-```
 
----
-
-## Установка Git hooks
-
-Для автоматической проверки кода перед коммитом:
-
-```bash
+# Установка pre-commit для автопроверки кода перед коммитом
 pre-commit install
-```
-
-Проверить работу вручную:
-
-```bash
+# Запуск ручной проверки
 pre-commit run --all-files
+
 ```
 
----
+### 3. Переменные окружения
 
-## Настройка переменных окружения
-
-Создать файл `.env` в корне проекта на основе `.env.example`.
-
-Пример `.env`:
+Создайте файл `.env` в корне проекта на основе `.env.example`:
 
 ```env
 SECRET_KEY=your_secret_key
@@ -95,85 +109,98 @@ DB_USER=corpmarket_user
 DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=5432
+
 ```
 
-Файл `.env` содержит локальные настройки и не должен попадать в Git.
-
-Для генерации нового `SECRET_KEY`:
+*Для генерации нового `SECRET_KEY` используйте команду:*
 
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-# 🐳 Запуск через Docker
+---
 
-Если в проекте настроен Docker, вы можете запустить его изолированно, не настраивая локальный PostgreSQL и Python-окружение:
+## 🧪 Тестирование и работа с БД
 
-Соберите образ и поднимите контейнеры в фоновом режиме:
-```Bash
-docker-compose up -d --build
-```
-Выполните миграции внутри работающего контейнера:
-```Bash
-docker-compose exec web python CorpMarket/manage.py migrate
-```
-Создайте администратора Django:
-```Bash
-docker-compose exec web python CorpMarket/manage.py createsuperuser
+При запущенном контейнере можно накатить тестовые данные или сделать бэкап.
+
+**Создание дампа текущей базы данных:**
+
+```bash
+./fixture_backup.sh  
 ```
 
-## Дополнительные команды
+**Тестовые аккаунты (доступны после загрузки фикстур):**
 
-Посмотреть логи (общие для всех контейнеров и отдельные):
-```Bash
-docker compose logs -f
-docker compose logs -f web
-docker compose logs -f db
-```
+* `admin@admin.com` / Пароль: `admin` (Admin)
+* `qwerty@qwerty.com` / Пароль: `123qweasdzxc!`
+* `mikle@milke.com` / Пароль: `123qweasdzxc!`
 
-Остановить контейнеры:
-```Bash
-docker compose down -v
-```
+### Покрытие кода (Coverage)
 
-## После запуска приложение доступно:
+Запуск тестов и генерация HTML-отчета:
+
+```bash
+docker compose exec web pip install coverage
+docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && coverage html"
 
 ```
-http://127.0.0.1:8000/
-```
 
-# Небольшой flow user
+Отчет будет доступен в файле: `CorpMarket/htmlcov/index.html`
 
-Главная страница(пока пуста, так как нет объявлений)
-![image 1](./docs/images/image_1.png)
+---
 
+## 🏗 Архитектура и структура базы данных
+
+* **Users:** Основная пользовательская сущность (фото, адрес, рейтинги продавца/покупателя).
+* **Credentials:** Данные для входа (`OneToOne` к `Users`, логин, хеш пароля).
+* **Admin:** Права администратора (`OneToOne` к `Users`).
+* **Adverts:** Основная сущность объявлений (статус, категория, цена, описание, адрес).
+* **Photos:** Фотографии, прикрепленные к объявлениям (`ForeignKey` к `Adverts`).
+* **Chats:** Диалоги между автором объявления и покупателем.
+* **Messages:** Сообщения внутри чата.
+* **Reviews:** Отзывы по завершённым сделкам (оценка, текст, кому оставлен).
+
+**Связи:**
+
+* *Users → Adverts / Reviews / Chats / Messages* (1:M)
+* *Adverts → Photos / Reviews / Chats* (1:M)
+* *Chats → Messages* (1:M)
+* *Users → Credentials / Admin* (1:1)
+
+**ER-диаграмма:**
+![image 20](./docs/images/image_20.png)
+---
+
+## 📸 Скриншоты интерфейса
+
+- **Авторизация и Регистрация**
 ![image 2](./docs/images/image_2.png)
-
 ![image 3](./docs/images/image_3.png)
 
-Создание объявления
-![image 4](./docs/images/image_4.png)
-Просмотр детальный объявления
+- **Детальный просмотр объявления**
 ![image 5](./docs/images/image_5.png)
 
-![image 6](./docs/images/image_6.png)
-
-![image 7](./docs/images/image_7.png)
-
-![image 9](./docs/images/image_9.png)
-Редактирование профиля
-![image 10](./docs/images/image_10.png)
-
-![image 13](./docs/images/image_13.png)
-старые объявления + добавленные 
+- **Список объявлений** 
 ![image 15](./docs/images/image_15.png)
-фильтр по мероприяютию
-![image 16](./docs/images/image_16.png)
-Фильтр по цене
-![image 17](./docs/images/image_17.png)
 
-Просмотр профиля
+- **Просмотр профиля**
 ![image 18](./docs/images/image_18.png)
 
-Редактирование Объявления
-![image 19](./docs/images/image_19.png)
+- **Чаты**
+![image 21](./docs/images/image_21.png)
+
+- **Отзывы** 
+![image 22](./docs/images/image_22.png)
+
+---
+
+## 👥 Разработчики
+
+Проект выполняли:
+
+* **Глебов Владислав Сергеевич**
+* Лямин Егор Алексеевич
+* Соколов Сергей Константинович
+* Дашкин Рушан Ряшидович
+* Гущин Александр Сергеевич
