@@ -17,7 +17,7 @@
    DB_NAME=corporate_market
    DB_USER=corpmarket_user
    DB_PASSWORD=your_password
-   DB_HOST=localhost
+   DBHOSTl=db
    DB_PORT=5432
    ```
 
@@ -107,7 +107,7 @@ DEBUG=True
 DB_NAME=corporate_market
 DB_USER=corpmarket_user
 DB_PASSWORD=your_password
-DB_HOST=localhost
+DBHOSTl=db
 DB_PORT=5432
 
 ```
