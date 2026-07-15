@@ -172,6 +172,10 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 ![image 20](./docs/images/image_20.png)
 ---
 
+**Схема сервисов:**
+<img width="1061" height="391" alt="Схема Сервисов" src="https://github.com/user-attachments/assets/bc31bc04-f6c5-4ebb-96f6-107e759e6262" />
+---
+
 ## 📸 Скриншоты интерфейса
 
 - **Авторизация и Регистрация**
