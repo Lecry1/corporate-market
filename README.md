@@ -176,6 +176,10 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 <img width="1061" height="391" alt="Схема Сервисов" src="https://github.com/user-attachments/assets/bc31bc04-f6c5-4ebb-96f6-107e759e6262" />
 ---
 
+**Схема взаимодействия создания объявления:**
+<img width="742" height="643" alt="Схема взаимодействия создания объявления drawio" src="https://github.com/user-attachments/assets/15899593-3dda-4fe8-8220-520e2828c1f8" />
+---
+
 ## 📸 Скриншоты интерфейса
 
 - **Авторизация и Регистрация**
