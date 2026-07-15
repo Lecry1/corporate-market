@@ -194,6 +194,8 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 - **Чаты**
 <img width="1668" height="1030" alt="image" src="https://github.com/user-attachments/assets/9c0fe0b6-c1ab-42e5-a50a-3ef9c9f948c2" />
 
+- **Админка**
+<img width="1147" height="472" alt="image" src="https://github.com/user-attachments/assets/91b51016-040b-46a7-9cad-2c8e14c4cc16" />
 
 - **Отзывы** 
 ![image 22](./docs/images/image_22.png)
