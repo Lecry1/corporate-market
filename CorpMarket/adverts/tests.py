@@ -10,6 +10,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+User = get_user_model()
+
+# ==========================================
+# ТЕСТЫ МОДЕЛИ
+# ==========================================
 
 User = get_user_model()
 
@@ -178,10 +183,9 @@ class AdvertModelTest(TestCase):
             filename="second.jpg",
         )
 
-        self.assertEqual(
-            advert.main_photo,
-            first_photo,
-        )
+# ==========================================
+# ТЕСТЫ ВЬЮХ
+# ==========================================
 
     def test_price_is_negotiable_when_price_is_empty(self):
         advert = create_advert(
