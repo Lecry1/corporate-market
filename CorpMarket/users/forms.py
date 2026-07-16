@@ -6,7 +6,34 @@ from django.contrib.auth.forms import UserCreationForm
 User = get_user_model()
 
 
-class UserRegisterForm(UserCreationForm):
+class EmailUniqueValidationMixin:
+    email_duplicate_error = (
+        "Пользователь с таким email уже существует."
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+
+        queryset = User.objects.filter(
+            email__iexact=email,
+        )
+
+        instance = getattr(self, "instance", None)
+
+        if instance and instance.pk:
+            queryset = queryset.exclude(
+                pk=instance.pk,
+            )
+
+        if queryset.exists():
+            raise forms.ValidationError(
+                self.email_duplicate_error
+            )
+
+        return email
+
+
+class UserRegisterForm(EmailUniqueValidationMixin, UserCreationForm):
     email = forms.EmailField(
         required=True,
         label="Email",
@@ -62,18 +89,3 @@ class UserProfileUpdateForm(forms.ModelForm):
                 }
             ),
         }
-
-    def clean_email(self):
-        email = self.cleaned_data["email"]
-
-        if (
-            User.objects
-            .exclude(pk=self.instance.pk)
-            .filter(email__iexact=email)
-            .exists()
-        ):
-            raise forms.ValidationError(
-                "Пользователь с таким email уже существует."
-            )
-
-        return email
