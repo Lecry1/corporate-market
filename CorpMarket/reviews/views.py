@@ -28,6 +28,17 @@ class ReviewCreateView(LoginRequiredMixin, CreateView):
             )
             self.reviewed_user = self.chat.get_other_user(request.user)
 
+            if not self.chat.has_two_way_communication():
+                messages.error(
+                    request,
+                    (
+                        "Оставить отзыв можно только после общения: "
+                        "покупатель и продавец должны отправить "
+                        "хотя бы по одному сообщению."
+                    ),
+                )
+                return redirect("chats:detail",pk=self.chat.pk,)
+
             # if self.chat.advert.status != Advert.Status.COMPLETED:
             #     messages.error(request, 'Отзыв можно оставить только после завершения сделки.')
             #     return redirect('chats:detail', pk=self.chat.pk)

@@ -148,8 +148,14 @@ class ChatDetailView(LoginRequiredMixin, FormMixin, DetailView):
         context['chat_messages'] = list(reversed(message_page.object_list))
         context['message_page'] = message_page
         context['other_user'] = other_user
-        context['can_leave_review'] = not review_exists  # and self.object.advert.status == Advert.Status.COMPLETED
-        context['review_exists'] = review_exists
+
+        has_two_way_communication = (self.object.has_two_way_communication())
+        
+        context["can_leave_review"] = (has_two_way_communication and not review_exists)
+        context["review_exists"] = review_exists
+        context["has_two_way_communication"] = (
+            has_two_way_communication
+        )
         return context
 
     def post(self, request, *args, **kwargs):

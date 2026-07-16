@@ -1,16 +1,14 @@
-from adverts.models import Advert
-from chats.models import Chat
 from django.test import TestCase
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 
+from chats.models import Chat, Message
+from adverts.models import Advert
 from reviews.forms import ReviewForm
 from reviews.models import Review
 from users.models import CustomUser
 
 
-# ==========================================
-# ТЕСТЫ МОДЕЛИ (Объединены из обеих веток)
-# ==========================================
 
 class ReviewModelTest(TestCase):
 
@@ -24,8 +22,18 @@ class ReviewModelTest(TestCase):
             category=Advert.Category.SERVICE,
             status=Advert.Status.COMPLETED,
         )
-        # Добавлено из dev: чат нужен для проверки рейтинга и flow-тестов
+        # Чат нужен для проверки рейтинга и flow-тестов
         self.chat = Chat.objects.create(advert=self.advert, buyer=self.buyer, seller=self.seller)
+        Message.objects.create(
+            chat=self.chat,
+            sender=self.buyer,
+            text="Здравствуйте, объявление актуально?",
+        )
+        Message.objects.create(
+            chat=self.chat,
+            sender=self.seller,
+            text="Здравствуйте, да, актуально.",
+        )
 
     def test_review_creation_and_string_representation(self):
         review = Review.objects.create(
@@ -51,6 +59,23 @@ class ReviewModelTest(TestCase):
         self.seller.refresh_from_db()
         self.assertEqual(self.seller.seller_rating, 0.0)
 
+    def test_review_is_invalid_without_two_way_communication(self):
+        self.chat.messages.all().delete()
+
+        Message.objects.create(chat=self.chat,sender=self.buyer,text="Сообщение покупателя без ответа продавца.")
+
+        review = Review(
+            from_user=self.buyer,
+            to_user=self.seller,
+            advert=self.advert,
+            flag=Review.Flag.TO_SELLER,
+            rating=1,
+            comment="Попытка оставить отзыв без общения.",
+        )
+
+        with self.assertRaises(ValidationError):
+            review.full_clean()
+
 
 # ==========================================
 # ТЕСТЫ ФОРМ (из ветки dev)
@@ -69,7 +94,7 @@ class ReviewFormTest(TestCase):
 
 
 # ==========================================
-# ТЕСТЫ БИЗНЕС-ЛОГИКИ И ВЬЮХ (из ветки dev)
+# ТЕСТЫ БИЗНЕС-ЛОГИКИ И ВЬЮХ
 # ==========================================
 
 class ReviewFlowTest(TestCase):
@@ -86,6 +111,16 @@ class ReviewFlowTest(TestCase):
             status=Advert.Status.ACTIVE,
         )
         self.chat = Chat.objects.create(advert=self.advert, buyer=self.buyer, seller=self.seller)
+        Message.objects.create(
+            chat=self.chat,
+            sender=self.buyer,
+            text="Здравствуйте, можно уточнить детали?",
+        )
+        Message.objects.create(
+            chat=self.chat,
+            sender=self.seller,
+            text="Здравствуйте, конечно.",
+        )
 
     def test_guest_is_redirected_to_login(self):
         url = reverse('reviews:create', kwargs={'chat_pk': self.chat.pk})
@@ -186,24 +221,23 @@ class ReviewFlowTest(TestCase):
         self.assertTrue(response.context["can_leave_review"])
         self.assertContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},),)
 
+    def test_review_action_is_hidden_after_review(self):
+        Review.objects.create(
+            from_user=self.buyer,
+            to_user=self.seller,
+            advert=self.advert,
+            flag=Review.Flag.TO_SELLER,
+            rating=5,
+            comment="Отзыв уже оставлен.",
+        )
 
-def test_review_action_is_hidden_after_review(self):
-    Review.objects.create(
-        from_user=self.buyer,
-        to_user=self.seller,
-        advert=self.advert,
-        flag=Review.Flag.TO_SELLER,
-        rating=5,
-        comment="Отзыв уже оставлен.",
-    )
+        self.client.force_login(self.buyer)
 
-    self.client.force_login(self.buyer)
+        response = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk},))
 
-    response = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk},))
-
-    self.assertFalse(response.context["can_leave_review"])
-    self.assertTrue(response.context["review_exists"])
-    self.assertNotContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},),)
+        self.assertFalse(response.context["can_leave_review"])
+        self.assertTrue(response.context["review_exists"])
+        self.assertNotContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},),)
 
     def test_review_can_be_created_for_active_advert(self):
         self.advert.status = Advert.Status.ACTIVE
@@ -222,3 +256,40 @@ def test_review_action_is_hidden_after_review(self):
         review.save()
 
         self.assertTrue(Review.objects.filter(pk=review.pk).exists())
+
+    def test_review_is_unavailable_without_seller_reply(self):
+        self.chat.messages.all().delete()
+
+        Message.objects.create(chat=self.chat,sender=self.buyer,text="Здравствуйте, объявление актуально?")
+        self.client.force_login(self.buyer)
+        response = self.client.get(reverse("reviews:create",kwargs={"chat_pk": self.chat.pk}))
+        self.assertRedirects(response,reverse("chats:detail",kwargs={"pk": self.chat.pk},))
+
+        self.assertFalse(Review.objects.exists())
+
+    def test_review_action_is_hidden_without_seller_reply(self):
+        self.chat.messages.all().delete()
+
+        Message.objects.create(chat=self.chat,sender=self.buyer,text="Первое сообщение покупателя.")
+        self.client.force_login(self.buyer)
+        response = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk}))
+
+        self.assertFalse(response.context["can_leave_review"])
+        self.assertFalse(response.context["has_two_way_communication"])
+        self.assertNotContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk}))
+
+    def test_review_action_appears_after_seller_reply(self):
+        self.chat.messages.all().delete()
+        Message.objects.create(chat=self.chat,sender=self.buyer,text="Здравствуйте, объявление актуально?")
+
+        self.client.force_login(self.buyer)
+
+        response_before_reply = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk}))
+        self.assertFalse(response_before_reply.context["can_leave_review"])
+
+        Message.objects.create(chat=self.chat,sender=self.seller,text="Здравствуйте, да, актуально.")
+        response_after_reply = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk}))
+
+        self.assertTrue(response_after_reply.context["has_two_way_communication"])
+        self.assertTrue(response_after_reply.context["can_leave_review"])
+        self.assertContains(response_after_reply,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk}))
