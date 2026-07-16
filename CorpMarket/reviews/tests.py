@@ -80,10 +80,10 @@ class ReviewFlowTest(TestCase):
         self.outsider = CustomUser.objects.create_user(username='outsider', password='safe-password')
         self.advert = Advert.objects.create(
             seller=self.seller,
-            title='Завершённая сделка',
-            description='Объявление для проверки отзывов.',
+            title="Активное объявление",
+            description="Объявление для проверки отзывов.",
             category=Advert.Category.PRODUCT,
-            status=Advert.Status.COMPLETED,
+            status=Advert.Status.ACTIVE,
         )
         self.chat = Chat.objects.create(advert=self.advert, buyer=self.buyer, seller=self.seller)
 
@@ -129,14 +129,12 @@ class ReviewFlowTest(TestCase):
         self.assertEqual(review.to_user, self.buyer)
         self.assertEqual(review.flag, Review.Flag.TO_BUYER)
 
-    def test_review_is_forbidden_until_advert_is_completed(self):
-        self.advert.status = Advert.Status.ACTIVE
-        self.advert.save(update_fields=['status'])
+    def test_review_form_is_available_for_active_advert(self):
         self.client.force_login(self.buyer)
-        response = self.client.get(reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}))
+        response = self.client.get(reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},))
 
-        self.assertRedirects(response, reverse('chats:detail', kwargs={'pk': self.chat.pk}))
-        self.assertFalse(Review.objects.exists())
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response,"reviews/review_form.html",)
 
     def test_outsider_cannot_review_chat_participant(self):
         self.client.force_login(self.outsider)
@@ -181,7 +179,46 @@ class ReviewFlowTest(TestCase):
         self.assertContains(user_response, review.comment)
         self.assertContains(advert_response, review.comment)
 
-    def test_completed_chat_shows_review_action(self):
+    def test_active_chat_shows_review_action(self):
         self.client.force_login(self.buyer)
-        response = self.client.get(reverse('chats:detail', kwargs={'pk': self.chat.pk}))
-        self.assertContains(response, reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}))
+        response = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk},))
+
+        self.assertTrue(response.context["can_leave_review"])
+        self.assertContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},),)
+
+
+def test_review_action_is_hidden_after_review(self):
+    Review.objects.create(
+        from_user=self.buyer,
+        to_user=self.seller,
+        advert=self.advert,
+        flag=Review.Flag.TO_SELLER,
+        rating=5,
+        comment="Отзыв уже оставлен.",
+    )
+
+    self.client.force_login(self.buyer)
+
+    response = self.client.get(reverse("chats:detail",kwargs={"pk": self.chat.pk},))
+
+    self.assertFalse(response.context["can_leave_review"])
+    self.assertTrue(response.context["review_exists"])
+    self.assertNotContains(response,reverse("reviews:create",kwargs={"chat_pk": self.chat.pk},),)
+
+    def test_review_can_be_created_for_active_advert(self):
+        self.advert.status = Advert.Status.ACTIVE
+        self.advert.save(update_fields=["status"])
+
+        review = Review(
+            from_user=self.buyer,
+            to_user=self.seller,
+            advert=self.advert,
+            flag=Review.Flag.TO_SELLER,
+            rating=5,
+            comment="Отзыв по активному объявлению.",
+        )
+
+        review.full_clean()
+        review.save()
+
+        self.assertTrue(Review.objects.filter(pk=review.pk).exists())

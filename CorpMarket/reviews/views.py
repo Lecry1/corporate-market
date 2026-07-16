@@ -28,9 +28,9 @@ class ReviewCreateView(LoginRequiredMixin, CreateView):
             )
             self.reviewed_user = self.chat.get_other_user(request.user)
 
-            if self.chat.advert.status != Advert.Status.COMPLETED:
-                messages.error(request, 'Отзыв можно оставить только после завершения сделки.')
-                return redirect('chats:detail', pk=self.chat.pk)
+            # if self.chat.advert.status != Advert.Status.COMPLETED:
+            #     messages.error(request, 'Отзыв можно оставить только после завершения сделки.')
+            #     return redirect('chats:detail', pk=self.chat.pk)
 
             if Review.objects.filter(
                 from_user=request.user,
