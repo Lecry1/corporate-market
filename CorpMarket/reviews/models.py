@@ -67,13 +67,21 @@ class Review(models.Model):
         if self.from_user_id and self.to_user_id and self.advert_id:
             from chats.models import Chat
 
-            shared_chat_exists = Chat.objects.filter(advert_id=self.advert_id).filter(
+            shared_chat = Chat.objects.filter(advert_id=self.advert_id).filter(
                 Q(buyer_id=self.from_user_id, seller_id=self.to_user_id)
                 | Q(seller_id=self.from_user_id, buyer_id=self.to_user_id)
-            ).exists()
+            ).first()
 
-            if not shared_chat_exists:
-                errors['to_user'] = 'Отзыв можно оставить только участнику чата по объявлению.'
+            if shared_chat is None:
+                errors["to_user"] = (
+                    "Отзыв можно оставить только "
+                    "участнику чата по объявлению."
+                )
+            elif not shared_chat.has_two_way_communication():
+                errors["to_user"] = (
+                    "Отзыв можно оставить только после того, "
+                    "как покупатель и продавец обменялись сообщениями."
+                )
 
             expected_flag = self.Flag.TO_SELLER if self.to_user_id == self.advert.seller_id else self.Flag.TO_BUYER
             if self.flag != expected_flag:

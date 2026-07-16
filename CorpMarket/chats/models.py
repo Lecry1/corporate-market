@@ -73,6 +73,24 @@ class Chat(models.Model):
 
         return None
 
+    def has_two_way_communication(self):
+        sender_ids = set(
+            self.messages.filter(
+                sender_id__in=(
+                    self.buyer_id,
+                    self.seller_id,
+                )
+            ).values_list(
+                "sender_id",
+                flat=True,
+            )
+        )
+
+        return {
+            self.buyer_id,
+            self.seller_id,
+        }.issubset(sender_ids)
+
 
 class Message(models.Model):
 
