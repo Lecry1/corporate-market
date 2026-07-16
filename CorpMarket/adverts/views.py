@@ -2,9 +2,16 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin,
     UserPassesTestMixin,
 )
-from django.db.models import Case, F, IntegerField, Q, Value, When
-from django.forms import inlineformset_factory
-from django.http import Http404
+from django.db import transaction
+from django.db.models import (
+    Case,
+    F,
+    IntegerField,
+    Q,
+    Value,
+    When,
+)
+from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -14,22 +21,15 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .models import Advert, Photo
-
-AdvertPhotoFormSet = inlineformset_factory(
-    Advert,
-    Photo,
-    fields=("image", ),
-    extra=1,
-    max_num=5,
-    validate_max=True,
-    can_delete=True,
-    min_num=0,
-    validate_min=False,
-)
+from .forms import AdvertPhotoFormSet
+from .models import Advert
 
 
 class NotFoundOnPermissionMixin:
+    """
+    Для авторизованного пользователя скрывает существование
+    чужого объекта, возвращая 404 вместо 403.
+    """
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
@@ -38,46 +38,51 @@ class NotFoundOnPermissionMixin:
         raise Http404
 
 
-class AdvertPhotoFormsetDataMixin:
-
-    def has_photo_formset_data(self):
-        prefix = self.formset_class.get_default_prefix()
-        return any(
-            key.startswith(f"{prefix}-") for key in list(self.request.POST.keys()) + list(self.request.FILES.keys())
-        )
-
-
 class AdvertPhotoFormSetMixin:
+    """
+    Добавляет formset фотографий к форме объявления.
+
+    Основная форма объявления и formset фотографий валидируются
+    до сохранения и затем сохраняются совместно.
+    """
+
     formset_class = AdvertPhotoFormSet
 
     def get_formset(self):
+        formset_kwargs = {
+            "instance": self.object,
+        }
+
         if self.request.method == "POST":
-            return self.formset_class(
-                self.request.POST,
-                self.request.FILES,
-                instance=self.object,
+            formset_kwargs.update(
+                {
+                    "data": self.request.POST,
+                    "files": self.request.FILES,
+                }
             )
 
-        return self.formset_class(instance=self.object)
+        return self.formset_class(**formset_kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.setdefault("photo_formset", self.get_formset())
+
+        if "photo_formset" not in context:
+            context["photo_formset"] = self.get_formset()
+
         return context
 
-    def render_invalid(self, form, formset):
-        return self.render_to_response(self.get_context_data(form=form, photo_formset=formset))
+    def render_invalid_forms(self, form, photo_formset):
+        """
+        Повторно отображает страницу с ошибками основной формы
+        и formset фотографий.
+        """
 
-    def form_valid(self, form):
-        photo_formset = self.get_formset()
-
-        if not photo_formset.is_valid():
-            return self.render_invalid(form, photo_formset)
-
-        response = super().form_valid(form)
-        photo_formset.instance = self.object
-        photo_formset.save()
-        return response
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                photo_formset=photo_formset,
+            )
+        )
 
 
 class AdvertListView(ListView):
@@ -103,13 +108,24 @@ class AdvertListView(ListView):
         ).strip()
 
         if query:
-            queryset = queryset.filter(Q(title__icontains=query) | Q(description__icontains=query))
+            queryset = queryset.filter(
+                Q(title__icontains=query)
+                | Q(description__icontains=query)
+            )
 
-        valid_categories = {value for value, _label in Advert.Category.choices}
+        valid_categories = {
+            value
+            for value, _label in Advert.Category.choices
+        }
+
         if category in valid_categories:
             queryset = queryset.filter(category=category)
 
-        valid_statuses = {value for value, _label in Advert.Status.choices}
+        valid_statuses = {
+            value
+            for value, _label in Advert.Status.choices
+        }
+
         if status != "all":
             if status not in valid_statuses:
                 status = Advert.Status.ACTIVE
@@ -118,13 +134,17 @@ class AdvertListView(ListView):
 
         if min_price:
             try:
-                queryset = queryset.filter(price__gte=int(min_price))
+                queryset = queryset.filter(
+                    price__gte=int(min_price)
+                )
             except ValueError:
                 pass
 
         if max_price:
             try:
-                queryset = queryset.filter(price__lte=int(max_price))
+                queryset = queryset.filter(
+                    price__lte=int(max_price)
+                )
             except ValueError:
                 pass
 
@@ -138,7 +158,9 @@ class AdvertListView(ListView):
         if ordering not in allowed_orderings:
             ordering = "-created_at"
 
-        ordering_expressions = self._get_ordering_expressions(ordering)
+        ordering_expressions = self._get_ordering_expressions(
+            ordering
+        )
 
         if status == "all":
             queryset = queryset.annotate(
@@ -172,9 +194,10 @@ class AdvertListView(ListView):
         """
         Возвращает безопасные выражения сортировки.
 
-        Для цены значения NULL ("Договорная") всегда располагаются
-        после объявлений с указанной ценой.
+        Для цены значения NULL — то есть договорная цена —
+        всегда располагаются после объявлений с указанной ценой.
         """
+
         if ordering == "price":
             return (
                 F("price").asc(nulls_last=True),
@@ -188,16 +211,15 @@ class AdvertListView(ListView):
             )
 
         if ordering == "created_at":
-            return (F("created_at").asc(), )
+            return (F("created_at").asc(),)
 
-        return (F("created_at").desc(), )
+        return (F("created_at").desc(),)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         context["categories"] = Advert.Category.choices
         context["statuses"] = Advert.Status.choices
-
         context["selected_status"] = self.request.GET.get(
             "status",
             Advert.Status.ACTIVE,
@@ -205,6 +227,7 @@ class AdvertListView(ListView):
 
         query_params = self.request.GET.copy()
         query_params.pop("page", None)
+
         context["query_string"] = query_params.urlencode()
 
         return context
@@ -215,11 +238,18 @@ class AdvertDetailView(DetailView):
     template_name = "adverts/advert_detail.html"
     context_object_name = "advert"
 
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("seller")
+            .prefetch_related("photos")
+        )
+
 
 class AdvertCreateView(
     LoginRequiredMixin,
     AdvertPhotoFormSetMixin,
-    AdvertPhotoFormsetDataMixin,
     CreateView,
 ):
     model = Advert
@@ -234,37 +264,46 @@ class AdvertCreateView(
 
     def post(self, request, *args, **kwargs):
         self.object = None
+
         form = self.get_form()
+        photo_formset = self.get_formset()
 
-        if form.is_valid():
-            if self.has_photo_formset_data():
-                photo_formset = self.get_formset()
-                if not photo_formset.is_valid():
-                    return self.render_invalid(form, photo_formset)
+        form_is_valid = form.is_valid()
+        photo_formset_is_valid = photo_formset.is_valid()
 
+        if not form_is_valid or not photo_formset_is_valid:
+            return self.render_invalid_forms(
+                form,
+                photo_formset,
+            )
+
+        return self.forms_valid(
+            form,
+            photo_formset,
+        )
+
+    def forms_valid(self, form, photo_formset):
+        """
+        Сохраняет объявление и фотографии один раз
+        в рамках общей транзакции.
+        """
+
+        with transaction.atomic():
             form.instance.seller = self.request.user
-            self.photo_formset = photo_formset if self.has_photo_formset_data() else None
-            return self.form_valid(form)
+            self.object = form.save()
 
-        photo_formset = self.get_formset() if self.has_photo_formset_data() else None
-        return self.render_invalid(form, photo_formset)
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-
-        photo_formset = getattr(self, "photo_formset", None)
-        if photo_formset is not None:
             photo_formset.instance = self.object
             photo_formset.save()
 
-        return response
+        return HttpResponseRedirect(
+            self.get_success_url()
+        )
 
 
 class AdvertUpdateView(
     LoginRequiredMixin,
     NotFoundOnPermissionMixin,
     AdvertPhotoFormSetMixin,
-    AdvertPhotoFormsetDataMixin,
     UserPassesTestMixin,
     UpdateView,
 ):
@@ -279,29 +318,49 @@ class AdvertUpdateView(
         "address",
     )
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = self.get_form()
-
-        if form.is_valid():
-            if self.has_photo_formset_data():
-                photo_formset = self.get_formset()
-                if not photo_formset.is_valid():
-                    return self.render_invalid(form, photo_formset)
-
-            return self.form_valid(form)
-
-        photo_formset = self.get_formset() if self.has_photo_formset_data() else None
-        return self.render_invalid(form, photo_formset)
-
     def test_func(self):
         advert = self.get_object()
 
-        return (advert.seller == self.request.user or self.request.user.is_superuser)
+        return (
+            advert.seller == self.request.user
+            or self.request.user.is_superuser
+        )
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        return response
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        form = self.get_form()
+        photo_formset = self.get_formset()
+
+        form_is_valid = form.is_valid()
+        photo_formset_is_valid = photo_formset.is_valid()
+
+        if not form_is_valid or not photo_formset_is_valid:
+            return self.render_invalid_forms(
+                form,
+                photo_formset,
+            )
+
+        return self.forms_valid(
+            form,
+            photo_formset,
+        )
+
+    def forms_valid(self, form, photo_formset):
+        """
+        Сохраняет изменения объявления только при валидных
+        фотографиях. При ошибке ни текст, ни файлы не изменяются.
+        """
+
+        with transaction.atomic():
+            self.object = form.save()
+
+            photo_formset.instance = self.object
+            photo_formset.save()
+
+        return HttpResponseRedirect(
+            self.get_success_url()
+        )
 
 
 class AdvertDeleteView(
@@ -317,4 +376,7 @@ class AdvertDeleteView(
     def test_func(self):
         advert = self.get_object()
 
-        return (advert.seller == self.request.user or self.request.user.is_superuser)
+        return (
+            advert.seller == self.request.user
+            or self.request.user.is_superuser
+        )
