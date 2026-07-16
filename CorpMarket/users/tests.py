@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.db import IntegrityError, transaction
 from users.models import Admin, CustomUser
 
 User = get_user_model()
 
 # ==========================================
-# ТЕСТЫ МОДЕЛЕЙ (из ветки dev)
+# ТЕСТЫ МОДЕЛЕЙ
 # ==========================================
 
 
@@ -27,6 +28,21 @@ class CustomUserModelTest(TestCase):
         self.assertEqual(user.seller_rating, 0.0)
         self.assertTrue(user.check_password(password))
 
+    def test_database_rejects_duplicate_email_case_insensitively(self):
+        CustomUser.objects.create_user(username="first",email="duplicate@example.com")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                CustomUser.objects.create_user(username="second",email="DUPLICATE@EXAMPLE.COM")
+
+    def test_database_allows_multiple_users_without_email(self):
+        first_user = CustomUser.objects.create_user(username="first_without_email")
+        second_user = CustomUser.objects.create_user(username="second_without_email")
+
+        self.assertEqual(first_user.email, "")
+        self.assertEqual(second_user.email, "")
+        self.assertEqual(CustomUser.objects.filter(email="").count(),2)
+
 
 class AdminModelTest(TestCase):
 
@@ -42,7 +58,7 @@ class AdminModelTest(TestCase):
 
 
 # ==========================================
-# ТЕСТЫ ВЬЮХ И АУТЕНТИФИКАЦИИ (из ветки tests)
+# ТЕСТЫ ВЬЮХ И АУТЕНТИФИКАЦИИ
 # ==========================================
 
 
@@ -107,6 +123,80 @@ class RegistrationSuccessTest(BaseUserTest):
         user = User.objects.first()
         self.assertTrue(response.wsgi_request.user.is_authenticated)
         self.assertEqual(response.wsgi_request.user, user)
+
+
+class RegistrationEmailUniquenessTest(BaseUserTest):
+    def setUp(self):
+        super().setUp()
+
+        User.objects.create_user(
+            username="existing_user",
+            email="existing@example.com",
+            password="StrongPass123!",
+        )
+
+    def test_registration_rejects_duplicate_email(self):
+        response = self.client.post(
+            self.register_url,
+            {
+                "username": "another_user",
+                "email": "existing@example.com",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertContains(
+            response,
+            "Пользователь с таким email уже существует.",
+        )
+
+    def test_registration_rejects_duplicate_email_with_other_case(
+        self,
+    ):
+        response = self.client.post(
+            self.register_url,
+            {
+                "username": "another_user",
+                "email": "EXISTING@EXAMPLE.COM",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertContains(
+            response,
+            "Пользователь с таким email уже существует.",
+        )
+
+    def test_registration_normalizes_email_to_lowercase(self):
+        response = self.client.post(
+            self.register_url,
+            {
+                "username": "new_user",
+                "email": "New.User@Example.COM",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            self.adverts_list_url,
+        )
+
+        user = User.objects.get(
+            username="new_user",
+        )
+
+        self.assertEqual(
+            user.email,
+            "new.user@example.com",
+        )
 
 
 # Тесты входа в аккаунт

@@ -17,7 +17,7 @@
    DB_NAME=corporate_market
    DB_USER=corpmarket_user
    DB_PASSWORD=your_password
-   DB_HOST=localhost
+   DBHOSTl=db
    DB_PORT=5432
    ```
 
@@ -107,7 +107,7 @@ DEBUG=True
 DB_NAME=corporate_market
 DB_USER=corpmarket_user
 DB_PASSWORD=your_password
-DB_HOST=localhost
+DBHOSTl=db
 DB_PORT=5432
 
 ```
@@ -172,6 +172,18 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 ![image 20](./docs/images/image_20.png)
 ---
 
+**Схема сервисов:**
+<img width="1061" height="391" alt="Схема Сервисов" src="https://github.com/user-attachments/assets/bc31bc04-f6c5-4ebb-96f6-107e759e6262" />
+---
+
+**Схема взаимодействия - созданиe объявления:**
+<img width="742" height="643" alt="Схема взаимодействия создания объявления drawio" src="https://github.com/user-attachments/assets/15899593-3dda-4fe8-8220-520e2828c1f8" />
+---
+
+**Декомпозиция:**
+<img width="954" height="868" alt="изображение" src="https://github.com/user-attachments/assets/62d3c6b9-3e38-4cc9-8712-4393a281173c" />
+---
+
 ## 📸 Скриншоты интерфейса
 
 - **Авторизация и Регистрация**
@@ -188,7 +200,12 @@ docker compose exec web sh -c "cd CorpMarket && coverage run manage.py test && c
 ![image 18](./docs/images/image_18.png)
 
 - **Чаты**
-![image 21](./docs/images/image_21.png)
+<img width="1668" height="1030" alt="image" src="https://github.com/user-attachments/assets/9c0fe0b6-c1ab-42e5-a50a-3ef9c9f948c2" />
+
+- **Админка**
+
+Администратор имеет возможность удаления и редактирования чужих объявлений
+<img width="1147" height="472" alt="image" src="https://github.com/user-attachments/assets/91b51016-040b-46a7-9cad-2c8e14c4cc16" />
 
 - **Отзывы** 
 ![image 22](./docs/images/image_22.png)
