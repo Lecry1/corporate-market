@@ -1,17 +1,22 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import BaseInlineFormSet, inlineformset_factory
+from django.forms import (
+    BaseInlineFormSet,
+    inlineformset_factory,
+)
 
 from .models import Advert, Photo
 
 
-ALLOWED_IMAGE_TYPES = {
+ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
     "image/webp",
 }
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 МБ
+MIN_PHOTO_COUNT = 1
+MAX_PHOTO_COUNT = 5
 
 
 class AdvertPhotoForm(forms.ModelForm):
@@ -22,7 +27,11 @@ class AdvertPhotoForm(forms.ModelForm):
             "image": forms.ClearableFileInput(
                 attrs={
                     "class": "form-control",
-                    "accept": "image/jpeg,image/png,image/webp",
+                    "accept": (
+                        "image/jpeg,"
+                        "image/png,"
+                        "image/webp"
+                    ),
                 }
             ),
         }
@@ -33,20 +42,26 @@ class AdvertPhotoForm(forms.ModelForm):
         if not image:
             return image
 
-        # У уже сохранённого файла может не быть content_type.
-        content_type = getattr(image, "content_type", None)
+        content_type = getattr(
+            image,
+            "content_type",
+            None,
+        )
 
         if (
             content_type is not None
-            and content_type not in ALLOWED_IMAGE_TYPES
+            and content_type
+            not in ALLOWED_IMAGE_CONTENT_TYPES
         ):
             raise ValidationError(
-                "Поддерживаются только изображения JPEG, PNG и WebP."
+                "Поддерживаются только изображения "
+                "JPEG, PNG и WebP."
             )
 
         if image.size > MAX_IMAGE_SIZE:
             raise ValidationError(
-                "Размер фотографии не должен превышать 10 МБ."
+                "Размер фотографии не должен "
+                "превышать 10 МБ."
             )
 
         return image
@@ -56,43 +71,63 @@ class BaseAdvertPhotoFormSet(BaseInlineFormSet):
     def clean(self):
         super().clean()
 
-        if any(self.errors):
+        # При ошибках конкретных файлов показываем эти ошибки,
+        # не добавляя поверх них ошибку количества фотографий.
+        if any(form.errors for form in self.forms):
             return
 
         photo_count = 0
 
         for form in self.forms:
-            if not hasattr(form, "cleaned_data"):
+            cleaned_data = getattr(
+                form,
+                "cleaned_data",
+                None,
+            )
+
+            if not cleaned_data:
                 continue
 
-            if form.cleaned_data.get("DELETE"):
+            if cleaned_data.get("DELETE"):
                 continue
 
-            uploaded_image = form.cleaned_data.get("image")
+            uploaded_image = cleaned_data.get("image")
+
+            # При редактировании новый файл можно не выбирать:
+            # в этом случае учитывается уже сохранённое изображение.
             existing_image = (
-                form.instance.pk
+                form.instance.pk is not None
                 and bool(form.instance.image)
             )
 
             if uploaded_image or existing_image:
                 photo_count += 1
 
-        if photo_count < 1:
+        if photo_count < MIN_PHOTO_COUNT:
             raise ValidationError(
                 "Добавьте минимум одну фотографию."
             )
 
+        if photo_count > MAX_PHOTO_COUNT:
+            raise ValidationError(
+                "Можно загрузить не более "
+                "5 фотографий."
+            )
+
 
 AdvertPhotoFormSet = inlineformset_factory(
-    Advert,
-    Photo,
+    parent_model=Advert,
+    model=Photo,
     form=AdvertPhotoForm,
     formset=BaseAdvertPhotoFormSet,
     fields=("image",),
-    extra=0,
-    min_num=1,
-    validate_min=True,
-    max_num=5,
+    extra=1,
+
+    # Минимум проверяется вручную по реальному числу фото.
+    min_num=0,
+    validate_min=False,
+
+    max_num=MAX_PHOTO_COUNT,
     validate_max=True,
     can_delete=True,
 )

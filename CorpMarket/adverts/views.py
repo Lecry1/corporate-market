@@ -11,7 +11,11 @@ from django.db.models import (
     Value,
     When,
 )
-from django.http import Http404, HttpResponseRedirect
+from django.http import (
+    Http404,
+    HttpResponseRedirect,
+    JsonResponse,
+)
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -26,11 +30,6 @@ from .models import Advert
 
 
 class NotFoundOnPermissionMixin:
-    """
-    Для авторизованного пользователя скрывает существование
-    чужого объекта, возвращая 404 вместо 403.
-    """
-
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
             return super().handle_no_permission()
@@ -39,13 +38,6 @@ class NotFoundOnPermissionMixin:
 
 
 class AdvertPhotoFormSetMixin:
-    """
-    Добавляет formset фотографий к форме объявления.
-
-    Основная форма объявления и formset фотографий валидируются
-    до сохранения и затем сохраняются совместно.
-    """
-
     formset_class = AdvertPhotoFormSet
 
     def get_formset(self):
@@ -61,21 +53,100 @@ class AdvertPhotoFormSetMixin:
                 }
             )
 
-        return self.formset_class(**formset_kwargs)
+        return self.formset_class(
+            **formset_kwargs
+        )
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = super().get_context_data(
+            **kwargs
+        )
 
         if "photo_formset" not in context:
-            context["photo_formset"] = self.get_formset()
+            context["photo_formset"] = (
+                self.get_formset()
+            )
 
         return context
 
-    def render_invalid_forms(self, form, photo_formset):
-        """
-        Повторно отображает страницу с ошибками основной формы
-        и formset фотографий.
-        """
+    def is_ajax_request(self):
+        return (
+            self.request.headers.get(
+                "x-requested-with"
+            )
+            == "XMLHttpRequest"
+        )
+
+    @staticmethod
+    def serialize_form_errors(form):
+        serialized_errors = {}
+
+        for field_name, errors in (
+            form.errors.get_json_data().items()
+        ):
+            serialized_errors[field_name] = [
+                error["message"]
+                for error in errors
+            ]
+
+        return serialized_errors
+
+    @staticmethod
+    def serialize_formset_errors(
+        photo_formset,
+    ):
+        form_errors = []
+
+        for photo_form in photo_formset.forms:
+            serialized_form_errors = {}
+
+            for field_name, errors in (
+                photo_form.errors
+                .get_json_data()
+                .items()
+            ):
+                serialized_form_errors[
+                    field_name
+                ] = [
+                    error["message"]
+                    for error in errors
+                ]
+
+            form_errors.append(
+                serialized_form_errors
+            )
+
+        return {
+            "forms": form_errors,
+            "non_form_errors": [
+                str(error)
+                for error
+                in photo_formset.non_form_errors()
+            ],
+        }
+
+    def render_invalid_forms(
+        self,
+        form,
+        photo_formset,
+    ):
+        if self.is_ajax_request():
+            return JsonResponse(
+                {
+                    "success": False,
+                    "form_errors": (
+                        self.serialize_form_errors(
+                            form
+                        )
+                    ),
+                    "photo_formset_errors": (
+                        self.serialize_formset_errors(
+                            photo_formset
+                        )
+                    ),
+                },
+                status=400,
+            )
 
         return self.render_to_response(
             self.get_context_data(
@@ -84,24 +155,61 @@ class AdvertPhotoFormSetMixin:
             )
         )
 
+    def get_success_response(self):
+        success_url = str(
+            self.get_success_url()
+        )
+
+        if self.is_ajax_request():
+            return JsonResponse(
+                {
+                    "success": True,
+                    "redirect_url": success_url,
+                },
+                status=201,
+            )
+
+        return HttpResponseRedirect(
+            success_url
+        )
+
 
 class AdvertListView(ListView):
     model = Advert
-    template_name = "adverts/advert_list.html"
+    template_name = (
+        "adverts/advert_list.html"
+    )
     context_object_name = "adverts"
     paginate_by = 6
 
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        query = self.request.GET.get("q", "").strip()
-        category = self.request.GET.get("category", "").strip()
+        query = self.request.GET.get(
+            "q",
+            "",
+        ).strip()
+
+        category = self.request.GET.get(
+            "category",
+            "",
+        ).strip()
+
         status = self.request.GET.get(
             "status",
             Advert.Status.ACTIVE,
         ).strip()
-        min_price = self.request.GET.get("min_price", "").strip()
-        max_price = self.request.GET.get("max_price", "").strip()
+
+        min_price = self.request.GET.get(
+            "min_price",
+            "",
+        ).strip()
+
+        max_price = self.request.GET.get(
+            "max_price",
+            "",
+        ).strip()
+
         ordering = self.request.GET.get(
             "ordering",
             "-created_at",
@@ -110,27 +218,35 @@ class AdvertListView(ListView):
         if query:
             queryset = queryset.filter(
                 Q(title__icontains=query)
-                | Q(description__icontains=query)
+                | Q(
+                    description__icontains=query
+                )
             )
 
         valid_categories = {
             value
-            for value, _label in Advert.Category.choices
+            for value, _label
+            in Advert.Category.choices
         }
 
         if category in valid_categories:
-            queryset = queryset.filter(category=category)
+            queryset = queryset.filter(
+                category=category
+            )
 
         valid_statuses = {
             value
-            for value, _label in Advert.Status.choices
+            for value, _label
+            in Advert.Status.choices
         }
 
         if status != "all":
             if status not in valid_statuses:
                 status = Advert.Status.ACTIVE
 
-            queryset = queryset.filter(status=status)
+            queryset = queryset.filter(
+                status=status
+            )
 
         if min_price:
             try:
@@ -158,23 +274,31 @@ class AdvertListView(ListView):
         if ordering not in allowed_orderings:
             ordering = "-created_at"
 
-        ordering_expressions = self._get_ordering_expressions(
-            ordering
+        ordering_expressions = (
+            self._get_ordering_expressions(
+                ordering
+            )
         )
 
         if status == "all":
             queryset = queryset.annotate(
                 status_priority=Case(
                     When(
-                        status=Advert.Status.ACTIVE,
+                        status=(
+                            Advert.Status.ACTIVE
+                        ),
                         then=Value(0),
                     ),
                     When(
-                        status=Advert.Status.COMPLETED,
+                        status=(
+                            Advert.Status.COMPLETED
+                        ),
                         then=Value(1),
                     ),
                     When(
-                        status=Advert.Status.ARCHIVED,
+                        status=(
+                            Advert.Status.ARCHIVED
+                        ),
                         then=Value(2),
                     ),
                     default=Value(3),
@@ -187,55 +311,74 @@ class AdvertListView(ListView):
                 *ordering_expressions,
             )
 
-        return queryset.order_by(*ordering_expressions)
+        return queryset.order_by(
+            *ordering_expressions
+        )
 
     @staticmethod
-    def _get_ordering_expressions(ordering):
-        """
-        Возвращает безопасные выражения сортировки.
-
-        Для цены значения NULL — то есть договорная цена —
-        всегда располагаются после объявлений с указанной ценой.
-        """
-
+    def _get_ordering_expressions(
+        ordering,
+    ):
         if ordering == "price":
             return (
-                F("price").asc(nulls_last=True),
+                F("price").asc(
+                    nulls_last=True
+                ),
                 F("created_at").desc(),
             )
 
         if ordering == "-price":
             return (
-                F("price").desc(nulls_last=True),
+                F("price").desc(
+                    nulls_last=True
+                ),
                 F("created_at").desc(),
             )
 
         if ordering == "created_at":
-            return (F("created_at").asc(),)
+            return (
+                F("created_at").asc(),
+            )
 
-        return (F("created_at").desc(),)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        context["categories"] = Advert.Category.choices
-        context["statuses"] = Advert.Status.choices
-        context["selected_status"] = self.request.GET.get(
-            "status",
-            Advert.Status.ACTIVE,
+        return (
+            F("created_at").desc(),
         )
 
-        query_params = self.request.GET.copy()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(
+            **kwargs
+        )
+
+        context["categories"] = (
+            Advert.Category.choices
+        )
+        context["statuses"] = (
+            Advert.Status.choices
+        )
+        context["selected_status"] = (
+            self.request.GET.get(
+                "status",
+                Advert.Status.ACTIVE,
+            )
+        )
+
+        query_params = (
+            self.request.GET.copy()
+        )
         query_params.pop("page", None)
 
-        context["query_string"] = query_params.urlencode()
+        context["query_string"] = (
+            query_params.urlencode()
+        )
 
         return context
 
 
 class AdvertDetailView(DetailView):
     model = Advert
-    template_name = "adverts/advert_detail.html"
+    template_name = (
+        "adverts/advert_detail.html"
+    )
     context_object_name = "advert"
 
     def get_queryset(self):
@@ -253,7 +396,9 @@ class AdvertCreateView(
     CreateView,
 ):
     model = Advert
-    template_name = "adverts/advert_form.html"
+    template_name = (
+        "adverts/advert_form.html"
+    )
     fields = (
         "title",
         "description",
@@ -262,16 +407,26 @@ class AdvertCreateView(
         "address",
     )
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
         self.object = None
 
         form = self.get_form()
         photo_formset = self.get_formset()
 
         form_is_valid = form.is_valid()
-        photo_formset_is_valid = photo_formset.is_valid()
+        photo_formset_is_valid = (
+            photo_formset.is_valid()
+        )
 
-        if not form_is_valid or not photo_formset_is_valid:
+        if (
+            not form_is_valid
+            or not photo_formset_is_valid
+        ):
             return self.render_invalid_forms(
                 form,
                 photo_formset,
@@ -282,22 +437,23 @@ class AdvertCreateView(
             photo_formset,
         )
 
-    def forms_valid(self, form, photo_formset):
-        """
-        Сохраняет объявление и фотографии один раз
-        в рамках общей транзакции.
-        """
-
+    def forms_valid(
+        self,
+        form,
+        photo_formset,
+    ):
         with transaction.atomic():
-            form.instance.seller = self.request.user
+            form.instance.seller = (
+                self.request.user
+            )
             self.object = form.save()
 
-            photo_formset.instance = self.object
+            photo_formset.instance = (
+                self.object
+            )
             photo_formset.save()
 
-        return HttpResponseRedirect(
-            self.get_success_url()
-        )
+        return self.get_success_response()
 
 
 class AdvertUpdateView(
@@ -308,7 +464,9 @@ class AdvertUpdateView(
     UpdateView,
 ):
     model = Advert
-    template_name = "adverts/advert_form.html"
+    template_name = (
+        "adverts/advert_form.html"
+    )
     fields = (
         "title",
         "description",
@@ -322,20 +480,31 @@ class AdvertUpdateView(
         advert = self.get_object()
 
         return (
-            advert.seller == self.request.user
+            advert.seller
+            == self.request.user
             or self.request.user.is_superuser
         )
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
         self.object = self.get_object()
 
         form = self.get_form()
         photo_formset = self.get_formset()
 
         form_is_valid = form.is_valid()
-        photo_formset_is_valid = photo_formset.is_valid()
+        photo_formset_is_valid = (
+            photo_formset.is_valid()
+        )
 
-        if not form_is_valid or not photo_formset_is_valid:
+        if (
+            not form_is_valid
+            or not photo_formset_is_valid
+        ):
             return self.render_invalid_forms(
                 form,
                 photo_formset,
@@ -346,21 +515,20 @@ class AdvertUpdateView(
             photo_formset,
         )
 
-    def forms_valid(self, form, photo_formset):
-        """
-        Сохраняет изменения объявления только при валидных
-        фотографиях. При ошибке ни текст, ни файлы не изменяются.
-        """
-
+    def forms_valid(
+        self,
+        form,
+        photo_formset,
+    ):
         with transaction.atomic():
             self.object = form.save()
 
-            photo_formset.instance = self.object
+            photo_formset.instance = (
+                self.object
+            )
             photo_formset.save()
 
-        return HttpResponseRedirect(
-            self.get_success_url()
-        )
+        return self.get_success_response()
 
 
 class AdvertDeleteView(
@@ -370,13 +538,18 @@ class AdvertDeleteView(
     DeleteView,
 ):
     model = Advert
-    template_name = "adverts/advert_confirm_delete.html"
-    success_url = reverse_lazy("adverts:list")
+    template_name = (
+        "adverts/advert_confirm_delete.html"
+    )
+    success_url = reverse_lazy(
+        "adverts:list"
+    )
 
     def test_func(self):
         advert = self.get_object()
 
         return (
-            advert.seller == self.request.user
+            advert.seller
+            == self.request.user
             or self.request.user.is_superuser
         )
