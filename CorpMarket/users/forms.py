@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 
 User = get_user_model()
@@ -53,6 +53,32 @@ class UserRegisterForm(EmailUniqueValidationMixin, UserCreationForm):
             field.widget.attrs.update(
                 {"class": "form-control"}
             )
+
+
+class UserLoginForm(AuthenticationForm):
+    error_messages = {
+        "invalid_login": (
+            "Неверное имя пользователя или пароль."
+        ),
+        "inactive": (
+            "Этот аккаунт отключён."
+        ),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["username"].widget.attrs.update(
+            {
+                "class": "form-control",
+                "autofocus": True,
+            }
+        )
+        self.fields["password"].widget.attrs.update(
+            {
+                "class": "form-control",
+            }
+        )
 
 
 class UserProfileUpdateForm(forms.ModelForm):

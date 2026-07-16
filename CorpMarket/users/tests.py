@@ -221,7 +221,8 @@ class LoginTest(BaseUserTest):
             'password': 'WrongPassword!',
         })
         self.assertFalse(response.wsgi_request.user.is_authenticated)
-        self.assertContains(response, 'Пожалуйста, введите правильные имя пользователя и пароль')
+        self.assertContains(response, 'Неверное имя пользователя или пароль')
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
 
 
 # Тесты выхода из аккаунта
