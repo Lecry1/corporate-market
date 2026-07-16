@@ -9,7 +9,7 @@ from users.models import CustomUser
 
 
 # ==========================================
-# ТЕСТЫ МОДЕЛИ (Объединены из обеих веток)
+# ТЕСТЫ МОДЕЛИ
 # ==========================================
 
 class ReviewModelTest(TestCase):
@@ -53,7 +53,7 @@ class ReviewModelTest(TestCase):
 
 
 # ==========================================
-# ТЕСТЫ ФОРМ (из ветки dev)
+# ТЕСТЫ ФОРМ
 # ==========================================
 
 class ReviewFormTest(TestCase):
@@ -69,7 +69,7 @@ class ReviewFormTest(TestCase):
 
 
 # ==========================================
-# ТЕСТЫ БИЗНЕС-ЛОГИКИ И ВЬЮХ (из ветки dev)
+# ТЕСТЫ БИЗНЕС-ЛОГИКИ И ВЬЮХ
 # ==========================================
 
 class ReviewFlowTest(TestCase):
@@ -94,7 +94,7 @@ class ReviewFlowTest(TestCase):
 
     def test_buyer_can_review_seller(self):
         self.client.force_login(self.buyer)
-        # Примечание: мы намеренно передаем "левые" from_user/to_user/flag, 
+        # Примечание: мы намеренно передаем "левые" from_user/to_user/flag,
         # чтобы проверить, что вьюха игнорирует их и ставит правильные (защита от подделки)
         response = self.client.post(
             reverse('reviews:create', kwargs={'chat_pk': self.chat.pk}),
@@ -175,7 +175,7 @@ class ReviewFlowTest(TestCase):
 
         user_response = self.client.get(reverse('reviews:user-list', kwargs={'user_pk': self.seller.pk}))
         advert_response = self.client.get(reverse('reviews:advert-list', kwargs={'advert_pk': self.advert.pk}))
-        
+
         self.assertEqual(user_response.status_code, 200)
         self.assertEqual(advert_response.status_code, 200)
         self.assertContains(user_response, review.comment)
