@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Чаты — КорпМаркет{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Чаты</h1>
+
+{% if chats %}
+    <div class="list-group">
+        {% for chat in chats %}
+            <a
+                class="list-group-item list-group-item-action"
+                href="{% url 'chats:detail' chat.pk %}"
+            >
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <h2 class="h5 mb-1">
+                            {% if chat.buyer == user %}
+                                {{ chat.seller.display_name }}
+                            {% else %}
+                                {{ chat.buyer.display_name }}
+                            {% endif %}
+                        </h2>
+
+                        <div class="text-muted mb-2">{{ chat.advert.title }}</div>
+
+                        {% if chat.last_message_text %}
+                            <div>{{ chat.last_message_text|truncatechars:100 }}</div>
+                        {% else %}
+                            <div class="text-muted">Сообщений пока нет.</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end text-nowrap">
+                        {% if chat.last_message_at %}
+                            <div class="text-muted small">
+                                {{ chat.last_message_at|date:"d.m.Y H:i" }}
+                            </div>
+                        {% endif %}
+
+                        {% if chat.unread_message_count %}
+                            <span class="badge text-bg-primary mt-2">
+                                {{ chat.unread_message_count }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        У вас пока нет чатов. Откройте объявление и нажмите «Написать продавцу».
+    </div>
+{% endif %}
+
+{% if is_paginated %}
+    <nav class="mt-4" aria-label="Навигация по страницам чатов">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперёд</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% endblock %}

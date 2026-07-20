@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Объявления — КорпМаркет
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h2 mb-1">Объявления</h1>
+
+        <p class="text-body-secondary mb-0">
+            Найдено: {{ page_obj.paginator.count }}
+        </p>
+    </div>
+
+    {% if user.is_authenticated %}
+        <a
+            class="btn btn-primary"
+            href="{% url 'adverts:create' %}"
+        >
+            + Создать объявление
+        </a>
+    {% endif %}
+</div>
+
+<form method="get" class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <div class="row g-2">
+            <div class="col-12 col-xl-4">
+                <label class="visually-hidden" for="search">Поиск</label>
+
+                <input
+                    id="search"
+                    class="form-control"
+                    type="search"
+                    name="q"
+                    placeholder="Название или описание"
+                    value="{{ request.GET.q }}"
+                >
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+                <label class="visually-hidden" for="category">Категория</label>
+
+                <select
+                    id="category"
+                    class="form-select"
+                    name="category"
+                >
+                    <option value="">Все категории</option>
+
+                    {% for value, label in categories %}
+                        <option
+                            value="{{ value }}"
+                            {% if request.GET.category == value %}selected{% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+                <label class="visually-hidden" for="status">Статус</label>
+
+                <select
+                    id="status"
+                    class="form-select"
+                    name="status"
+                >
+                    {% for value, label in statuses %}
+                        <option
+                            value="{{ value }}"
+                            {% if selected_status == value %}selected{% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+
+                    <option
+                        value="all"
+                        {% if selected_status == "all" %}selected{% endif %}
+                    >
+                        Все статусы
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-8 col-md-4 col-xl-2">
+                <label class="visually-hidden" for="ordering">Сортировка</label>
+
+                <select
+                    id="ordering"
+                    class="form-select"
+                    name="ordering"
+                >
+                    <option
+                        value="-created_at"
+                        {% if request.GET.ordering == "-created_at" or not request.GET.ordering %}selected{% endif %}
+                    >
+                        Сначала новые
+                    </option>
+
+                    <option
+                        value="created_at"
+                        {% if request.GET.ordering == "created_at" %}selected{% endif %}
+                    >
+                        Сначала старые
+                    </option>
+
+                    <option
+                        value="price"
+                        {% if request.GET.ordering == "price" %}selected{% endif %}
+                    >
+                        Сначала дешёвые
+                    </option>
+
+                    <option
+                        value="-price"
+                        {% if request.GET.ordering == "-price" %}selected{% endif %}
+                    >
+                        Сначала дорогие
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-4 col-xl-2 d-grid">
+                <button class="btn btn-primary" type="submit">
+                    Найти
+                </button>
+            </div>
+
+            <div class="col-6 col-md-3 col-xl-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">От</span>
+
+                    <input
+                        class="form-control"
+                        type="number"
+                        min="0"
+                        name="min_price"
+                        placeholder="0"
+                        aria-label="Минимальная цена"
+                        value="{{ request.GET.min_price }}"
+                    >
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3 col-xl-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">До</span>
+
+                    <input
+                        class="form-control"
+                        type="number"
+                        min="0"
+                        name="max_price"
+                        placeholder="∞"
+                        aria-label="Максимальная цена"
+                        value="{{ request.GET.max_price }}"
+                    >
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-6 d-flex align-items-center flex-wrap gap-2">
+                {% if request.GET.q %}
+                    <span class="badge rounded-pill text-bg-light border">
+                        Поиск: {{ request.GET.q }}
+                    </span>
+                {% endif %}
+
+                {% if request.GET.category %}
+                    {% for value, label in categories %}
+                        {% if request.GET.category == value %}
+                            <span class="badge rounded-pill text-bg-light border">
+                                {{ label }}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if selected_status == "all" %}
+                    <span class="badge rounded-pill text-bg-light border">
+                        Все статусы
+                    </span>
+                {% elif selected_status != "active" %}
+                    {% for value, label in statuses %}
+                        {% if selected_status == value %}
+                            <span class="badge rounded-pill text-bg-light border">
+                                {{ label }}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if request.GET.min_price %}
+                    <span class="badge rounded-pill text-bg-light border">
+                        От {{ request.GET.min_price }} ₽
+                    </span>
+                {% endif %}
+
+                {% if request.GET.max_price %}
+                    <span class="badge rounded-pill text-bg-light border">
+                        До {{ request.GET.max_price }} ₽
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="col-12 col-xl-2 d-grid">
+                {% if request.GET %}
+                    <a
+                        class="btn btn-sm btn-outline-secondary"
+                        href="{% url 'adverts:list' %}"
+                    >
+                        Сбросить фильтры
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>
+
+{% if selected_status == "all" and adverts %}
+    <div class="alert alert-light border py-2 small mb-3">
+        Объявления сгруппированы по статусу: активные, выполненные, архивные.
+    </div>
+{% endif %}
+
+{% if adverts %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+        {% for advert in adverts %}
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm overflow-hidden">
+                    {% if advert.main_photo %}
+                        <a href="{{ advert.get_absolute_url }}" class="d-block text-decoration-none">
+                            <img
+                                src="{{ advert.main_photo.image.url }}"
+                                class="w-100"
+                                alt="{{ advert.title }}"
+                                style="object-fit: cover; aspect-ratio: 16 / 10;"
+                            >
+                        </a>
+                    {% else %}
+                        <div class="bg-body-tertiary d-flex align-items-center justify-content-center text-body-secondary" style="aspect-ratio: 16 / 10;">
+                            Фото отсутствует
+                        </div>
+                    {% endif %}
+
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <span class="badge text-bg-light border">
+                                {{ advert.get_category_display }}
+                            </span>
+
+                            {% if advert.status == "active" %}
+                                <span class="badge text-bg-success">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% elif advert.status == "completed" %}
+                                <span class="badge text-bg-primary">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <h2 class="h5 card-title mb-2">
+                            <a
+                                class="link-body-emphasis text-decoration-none"
+                                href="{{ advert.get_absolute_url }}"
+                            >
+                                {{ advert.title }}
+                            </a>
+                        </h2>
+
+                        <p class="card-text text-body-secondary small mb-3">
+                            {{ advert.description|truncatechars:115 }}
+                        </p>
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-end gap-3">
+                                {% if advert.is_price_negotiable %}
+                                    <span class="fw-semibold">
+                                        Договорная
+                                    </span>
+                                {% else %}
+                                    <span class="fs-5 fw-semibold">
+                                        {{ advert.price }} ₽
+                                    </span>
+                                {% endif %}
+
+                                <a
+                                    class="btn btn-sm btn-outline-primary"
+                                    href="{{ advert.get_absolute_url }}"
+                                >
+                                    Подробнее
+                                </a>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <small class="text-body-secondary text-truncate">
+                                    {{ advert.seller.username }}
+                                </small>
+
+                                <small class="text-body-secondary text-nowrap">
+                                    {{ advert.created_at|date:"d.m.Y" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <div class="fs-1 mb-3">🔍</div>
+
+            <h2 class="h4">Объявления не найдены</h2>
+
+            <p class="text-body-secondary mb-3">
+                Измените параметры поиска или выберите другой статус.
+            </p>
+
+            <a
+                class="btn btn-outline-primary"
+                href="{% url 'adverts:list' %}"
+            >
+                Показать активные объявления
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+{% if is_paginated %}
+    <nav class="mt-4" aria-label="Навигация по страницам">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+                    >
+                        Назад
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Назад</span>
+                </li>
+            {% endif %}
+
+            {% for page_number in page_obj.paginator.page_range %}
+                {% if page_number == page_obj.number %}
+                    <li class="page-item active">
+                        <span class="page-link">
+                            {{ page_number }}
+                        </span>
+                    </li>
+                {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="?page={{ page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+                        >
+                            {{ page_number }}
+                        </a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+                    >
+                        Вперёд
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Вперёд</span>
+                </li>
+            {% endif %}
+        </ul>
+
+        <p class="text-center text-body-secondary small mt-2 mb-0">
+            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+        </p>
+    </nav>
+{% endif %}
+{% endblock %}

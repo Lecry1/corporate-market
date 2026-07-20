@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}КорпМаркет{% endblock %}</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+</head>
+
+<body class="bg-body-tertiary">
+<nav class="navbar navbar-expand-lg bg-body shadow-sm mb-4">
+    <div class="container">
+        <a
+            class="navbar-brand fw-semibold"
+            href="{% url 'adverts:list' %}"
+        >
+            КорпМаркет
+        </a>
+
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#main-navbar"
+            aria-controls="main-navbar"
+            aria-expanded="false"
+            aria-label="Открыть меню"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div
+            id="main-navbar"
+            class="collapse navbar-collapse"
+        >
+            <div class="ms-auto d-flex flex-column flex-lg-row align-items-lg-center gap-2 py-3 py-lg-0">
+                {% if user.is_authenticated %}
+                    <a
+                        class="btn btn-outline-primary"
+                        href="{% url 'chats:list' %}"
+                    >
+                        Чаты
+                    </a>
+
+                    <a
+                        class="btn btn-primary"
+                        href="{% url 'adverts:create' %}"
+                    >
+                        Создать объявление
+                    </a>
+
+                    <a
+                        href="{% url 'users:profile' %}"
+                        class="d-flex align-items-center gap-2 px-lg-2
+                               text-decoration-none link-body-emphasis"
+                    >
+                        {% if user.photo %}
+                            <img
+                                src="{{ user.photo.url }}"
+                                alt="Аватар {{ user.username }}"
+                                class="rounded-circle object-fit-cover"
+                                width="36"
+                                height="36"
+                            >
+                        {% else %}
+                            <span
+                                class="rounded-circle bg-secondary-subtle
+                                       d-inline-flex align-items-center
+                                       justify-content-center fw-semibold"
+                                style="width: 36px; height: 36px;"
+                            >
+                                {{ user.username|first|upper }}
+                            </span>
+                        {% endif %}
+
+                        <span>{{ user.username }}</span>
+                    </a>
+
+                    <form
+                        method="post"
+                        action="{% url 'users:logout' %}"
+                        class="m-0"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="btn btn-outline-secondary w-100"
+                            type="submit"
+                        >
+                            Выйти
+                        </button>
+                    </form>
+                {% else %}
+                    <a
+                        class="btn btn-outline-primary"
+                        href="{% url 'users:login' %}"
+                    >
+                        Войти
+                    </a>
+
+                    <a
+                        class="btn btn-primary"
+                        href="{% url 'users:register' %}"
+                    >
+                        Регистрация
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="container pb-5">
+    {% block content %}
+    {% endblock %}
+</main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+</body>
+</html>

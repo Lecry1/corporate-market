@@ -1,0 +1,233 @@
+[
+{
+  "model": "users.customuser",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$GJ6sBz4vW4iwjAD2obzr0p$W8WojIXxjMbJ/pD6/Jy+q+5DFELE1VfsxswSJ7453mQ=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@admin.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-07-13T08:17:56.925Z",
+    "photo": "",
+    "address": "",
+    "buyer_rating": 0.0,
+    "seller_rating": 0.0,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.customuser",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$KiqrzqFQhKtGWyyLH8Pv9d$MTEjKHIYwCIzvNkY4LBXZ7JloVy3rV6EcPC5F2jiy0s=",
+    "last_login": "2026-07-13T08:27:41.034Z",
+    "is_superuser": false,
+    "username": "qwerty",
+    "first_name": "",
+    "last_name": "",
+    "email": "qwerty@qwerty.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-13T08:21:52.896Z",
+    "photo": "users/photos/Снимок_экрана_2026-07-13_в_11.29.48.png",
+    "address": "Мякинино д52",
+    "buyer_rating": 0.0,
+    "seller_rating": 0.0,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.customuser",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$ok75vxyN4inOABbeGy1O4o$OYb5Utt8d3E8lD6IyGBXybYU5YMKtKpvYIa2pofrpSE=",
+    "last_login": "2026-07-13T08:30:52.278Z",
+    "is_superuser": false,
+    "username": "mikle",
+    "first_name": "",
+    "last_name": "",
+    "email": "mikle@mikle.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-13T08:30:51.725Z",
+    "photo": "",
+    "address": "",
+    "buyer_rating": 0.0,
+    "seller_rating": 0.0,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "adverts.advert",
+  "pk": 1,
+  "fields": {
+    "seller": [
+      "qwerty"
+    ],
+    "title": "BMW x5",
+    "description": "не бита! 100 проц",
+    "price": 5000000,
+    "category": "product",
+    "status": "active",
+    "address": "Пушкина д67",
+    "created_at": "2026-07-13T08:26:38.867Z"
+  }
+},
+{
+  "model": "adverts.advert",
+  "pk": 2,
+  "fields": {
+    "seller": [
+      "mikle"
+    ],
+    "title": "lego marvel",
+    "description": "LEGOOOO!!!\r\nаренда лего",
+    "price": 5000,
+    "category": "service",
+    "status": "active",
+    "address": "г. Москва ул. Мир д4",
+    "created_at": "2026-07-13T08:34:04.996Z"
+  }
+},
+{
+  "model": "adverts.advert",
+  "pk": 3,
+  "fields": {
+    "seller": [
+      "mikle"
+    ],
+    "title": "spider-man",
+    "description": "Почувствуй себя настоящим супергероем!\r\nLEGO набор \"Человек-паук\" — это идеальное сочетание культового персонажа Marvel и легендарного качества LEGO. Собери детализированную фигурку Человека-паука в его классическом красно-синем костюме и приготовься к эпическим приключениям.\r\nЧто внутри:\r\n\r\n    🕷️ Фигурка Человека-паука с подвижными конечностями и головой\r\n    🕸️ Паутина с функцией \"выстрела\"\r\n    🏙️ Элементы для создания городской сцены (здания, фонари)\r\n    🎭 Сменные выражения лица для разных эмоций\r\n    📖 Буклет с инструкцией и интересными фактами о персонаже\r\n\r\nОсобенности набора:\r\n\r\n    Высокая детализация — аутентичный дизайн костюма с узнаваемыми элементами\r\n    Подвижность — шарнирные соединения позволяют принимать динамичные позы\r\n    Совместимость — идеально сочетается с другими наборами LEGO Marvel\r\n    Качество — изготовлено из прочного, безопасного пластика\r\n\r\nДля кого этот набор:\r\n\r\n    Фанаты Marvel и Человека-паука\r\n    Коллекционеры LEGO-наборов\r\n    Дети от 8 лет и взрослые\r\n    Подарок на день рождения или праздник\r\n\r\nРазмеры собраной модели:\r\n\r\n    Высота фигурки: ~25 см\r\n    Количество деталей: 350+\r\n    Возраст: 8+\r\n\r\nРазвивающие возможности:\r\n\r\n    Мелкая моторика и координация\r\n    Пространственное мышление\r\n    Креативность и воображение\r\n    Терпение и усидчивость\r\n\r\n\r\nnot AI",
+    "price": 7500,
+    "category": "product",
+    "status": "active",
+    "address": "Пушкино Колотушкино",
+    "created_at": "2026-07-13T08:36:51.847Z"
+  }
+},
+{
+  "model": "adverts.advert",
+  "pk": 4,
+  "fields": {
+    "seller": [
+      "mikle"
+    ],
+    "title": "репититор по программированию!!!",
+    "description": "Помогу сдать любой экз на ИУ7!!!!\r\n\r\n\r\nИУУУУУУУУУ",
+    "price": 5000,
+    "category": "service",
+    "status": "active",
+    "address": "Грибоедовка д8",
+    "created_at": "2026-07-13T08:38:57.882Z"
+  }
+},
+{
+  "model": "adverts.advert",
+  "pk": 5,
+  "fields": {
+    "seller": [
+      "mikle"
+    ],
+    "title": "ФАН ВСТРЕЯЯЧА",
+    "description": "БУдет ВАУ ВИУ\r\nКРУТЬ КЛАССНО \r\n\r\nъыъ",
+    "price": 100,
+    "category": "event",
+    "status": "active",
+    "address": "г Москва центр",
+    "created_at": "2026-07-13T08:40:56.043Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 1,
+  "fields": {
+    "advert": 1,
+    "image": "advert_photos/2026/07/13/2024-bmw-x5-m60i-134-6602d491051b2.avif",
+    "caption": "",
+    "order": 0,
+    "uploaded_at": "2026-07-13T08:26:38.880Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 2,
+  "fields": {
+    "advert": 1,
+    "image": "advert_photos/2026/07/13/images.jpg",
+    "caption": "",
+    "order": 1,
+    "uploaded_at": "2026-07-13T08:26:38.885Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 3,
+  "fields": {
+    "advert": 2,
+    "image": "advert_photos/2026/07/13/ssssss.jpg",
+    "caption": "",
+    "order": 0,
+    "uploaded_at": "2026-07-13T08:34:05.005Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 4,
+  "fields": {
+    "advert": 2,
+    "image": "advert_photos/2026/07/13/images_BJg5mzq.jpg",
+    "caption": "",
+    "order": 1,
+    "uploaded_at": "2026-07-13T08:34:05.011Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 5,
+  "fields": {
+    "advert": 3,
+    "image": "advert_photos/2026/07/13/s12.jpg",
+    "caption": "",
+    "order": 0,
+    "uploaded_at": "2026-07-13T08:36:51.857Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 6,
+  "fields": {
+    "advert": 3,
+    "image": "advert_photos/2026/07/13/s3.jpg",
+    "caption": "",
+    "order": 1,
+    "uploaded_at": "2026-07-13T08:36:51.863Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 7,
+  "fields": {
+    "advert": 4,
+    "image": "advert_photos/2026/07/13/s52.jpg",
+    "caption": "",
+    "order": 0,
+    "uploaded_at": "2026-07-13T08:38:57.889Z"
+  }
+},
+{
+  "model": "adverts.photo",
+  "pk": 8,
+  "fields": {
+    "advert": 5,
+    "image": "advert_photos/2026/07/13/Снимок_экрана_2026-07-13_в_11.39.35.png",
+    "caption": "",
+    "order": 0,
+    "uploaded_at": "2026-07-13T08:40:56.051Z"
+  }
+}
+]

@@ -1,0 +1,48 @@
+{% extends "users/auth_base.html" %}
+
+{% block title %}Регистрация — КорпМаркет{% endblock %}
+{% block auth_title %}Регистрация{% endblock %}
+{% block auth_subtitle %}Создайте аккаунт, чтобы публиковать и редактировать объявления.{% endblock %}
+
+{% block auth_content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for field in form %}
+        <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+
+            {% if field.errors %}
+                <div class="text-danger small mt-1">
+                    {% for error in field.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if field.help_text %}
+                <div class="form-text text-muted small">
+                    {{ field.help_text|safe }}
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+    </div>
+
+    <p class="text-center text-muted mt-3 mb-0">
+        Уже есть аккаунт? <a href="{% url 'users:login' %}">Войти</a>
+    </p>
+</form>
+{% endblock %}

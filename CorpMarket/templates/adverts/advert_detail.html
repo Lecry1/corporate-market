@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ advert.title }} — КорпМаркет
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10">
+        <article class="card border-0 shadow-sm overflow-hidden">
+
+            {% if advert.photos.all %}
+                <div
+                    id="advert-photo-carousel"
+                    class="carousel slide bg-dark"
+                >
+                    <div class="carousel-inner">
+                        {% for photo in advert.photos.all %}
+                            <div
+                                class="carousel-item {% if forloop.first %}active{% endif %}"
+                            >
+                                <img
+                                    src="{{ photo.image.url }}"
+                                    class="d-block w-100 object-fit-contain"
+                                    style="height: 460px;"
+                                    alt="{% if photo.caption %}{{ photo.caption }}{% else %}Фотография объявления {{ advert.title }}{% endif %}"
+                                >
+
+                                {% if photo.caption %}
+                                    <div class="carousel-caption d-none d-md-block">
+                                        <p class="d-inline-block bg-dark bg-opacity-75 rounded px-3 py-2">
+                                            {{ photo.caption }}
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if advert.photos.count > 1 %}
+                        <button
+                            class="carousel-control-prev"
+                            type="button"
+                            data-bs-target="#advert-photo-carousel"
+                            data-bs-slide="prev"
+                        >
+                            <span
+                                class="carousel-control-prev-icon"
+                                aria-hidden="true"
+                            ></span>
+
+                            <span class="visually-hidden">
+                                Предыдущее фото
+                            </span>
+                        </button>
+
+                        <button
+                            class="carousel-control-next"
+                            type="button"
+                            data-bs-target="#advert-photo-carousel"
+                            data-bs-slide="next"
+                        >
+                            <span
+                                class="carousel-control-next-icon"
+                                aria-hidden="true"
+                            ></span>
+
+                            <span class="visually-hidden">
+                                Следующее фото
+                            </span>
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="card-body p-4 p-lg-5">
+                <div class="d-flex flex-column flex-md-row
+                            justify-content-between align-items-md-start
+                            gap-3 mb-4">
+                    <div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge text-bg-light border">
+                                {{ advert.get_category_display }}
+                            </span>
+
+                            {% if advert.status == "active" %}
+                                <span class="badge text-bg-success">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% elif advert.status == "completed" %}
+                                <span class="badge text-bg-primary">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">
+                                    {{ advert.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <h1 class="h2 mb-0">
+                            {{ advert.title }}
+                        </h1>
+                    </div>
+
+                    <div class="text-md-end text-nowrap">
+                        {% if advert.is_price_negotiable %}
+                            <span class="fs-4 fw-semibold">
+                                Договорная
+                            </span>
+                        {% else %}
+                            <span class="fs-3 fw-semibold">
+                                {{ advert.price }} ₽
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <p class="text-body-secondary small mb-1">
+                                Автор
+                            </p>
+
+                            <a
+                                href="{% url 'users:profile-detail' advert.seller.pk %}"
+                                class="fw-semibold text-decoration-none"
+                            >
+                                {{ advert.seller.username }}
+                            </a>
+                        </div>
+                    </div>
+
+                    {% if advert.address %}
+                        <div class="col-12 col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <p class="text-body-secondary small mb-1">
+                                    Адрес
+                                </p>
+
+                                <p class="fw-semibold mb-0">
+                                    {{ advert.address }}
+                                </p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <section class="mb-4">
+                    <h2 class="h5 mb-3">
+                        Описание
+                    </h2>
+
+                    <div class="text-body-secondary">
+                        {{ advert.description|linebreaks }}
+                    </div>
+                </section>
+
+                {% if advert.photos.count > 1 %}
+                    <section class="mb-4">
+                        <h2 class="h5 mb-3">
+                            Все фотографии
+                        </h2>
+
+                        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+                            {% for photo in advert.photos.all %}
+                                <div class="col">
+                                    <a
+                                        href="{{ photo.image.url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <img
+                                            src="{{ photo.image.url }}"
+                                            alt="{% if photo.caption %}{{ photo.caption }}{% else %}Фотография объявления{% endif %}"
+                                            class="img-fluid rounded object-fit-cover w-100"
+                                            style="height: 140px;"
+                                        >
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                <div class="d-flex flex-column flex-md-row
+                            justify-content-between align-items-md-center
+                            gap-3 pt-3 border-top">
+                    <p class="text-body-secondary small mb-0">
+                        Создано:
+                        {{ advert.created_at|date:"d.m.Y H:i" }}
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if user.is_authenticated and user != advert.seller %}
+                            {% if advert.status == "active" %}
+                                <a
+                                    class="btn btn-primary"
+                                    href="{% url 'chats:start' advert.pk %}"
+                                >
+                                    Написать продавцу
+                                </a>
+                            {% else %}
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    type="button"
+                                    disabled
+                                >
+                                    Объявление неактивно
+                                </button>
+                            {% endif %}
+                        {% elif not user.is_authenticated %}
+                            <a
+                                class="btn btn-primary"
+                                href="{% url 'users:login' %}?next={{ request.path|urlencode }}"
+                            >
+                                Войти, чтобы написать
+                            </a>
+                        {% endif %}
+
+                        {% if user == advert.seller or user.is_superuser %}
+                            <a
+                                class="btn btn-warning"
+                                href="{% url 'adverts:update' advert.pk %}"
+                            >
+                                Редактировать
+                            </a>
+
+                            <a
+                                class="btn btn-danger"
+                                href="{% url 'adverts:delete' advert.pk %}"
+                            >
+                                Удалить
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </article>
+    </div>
+</div>
+{% endblock %}
